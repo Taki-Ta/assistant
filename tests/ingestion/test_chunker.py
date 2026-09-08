@@ -1,23 +1,7 @@
-import hashlib
-from datetime import UTC, datetime
-from pathlib import Path
-
 import pytest
-from interview_ai.ingestion.models import MarkdownFile
 from interview_ai.ingestion.scanner import split_file
 
-
-def make_file(content: str) -> MarkdownFile:
-    now = datetime.now(UTC)
-    return MarkdownFile(
-        path=Path("knowledge.md"),
-        name="knowledge.md",
-        create_time=now,
-        modify_time=now,
-        size=len(content.encode("utf-8")),
-        content=content,
-        hash=hashlib.sha256(content.encode("utf-8")).hexdigest(),
-    )
+from tests.ingestion.util import make_file
 
 
 def test_split_file_uses_headings_and_keeps_source_lines():

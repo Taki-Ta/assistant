@@ -2,14 +2,13 @@ import hashlib
 import logging
 import re
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from pathlib import Path
 
-from .models import Chunk, MarkdownFile
+from .models import MAX_CHUNK_LENGTH, TIME_ZONE_LOCAL, Chunk, MarkdownFile
 
-TIME_ZONE_LOCAL = timezone(timedelta(hours=8))
 IGNORE_DIRS = [".git", ".venv", "assistant"]
-MAX_CHUNK_LENGTH = 500
+
 MAX_MARKDOWN_TITLE_LEVEL = 6
 TITLE_REGEX = re.compile(r"^ {0,3}(#{1,6})[ \t]+(.+?)[ \t]*#*[ \t]*$")
 FENCE_REGEX = re.compile(r"^ {0,3}(`{3,}|~{3,})")
