@@ -76,13 +76,13 @@ def split_file(
             content = "\n\n".join(block.content for block in group)
             chunks.append(
                 Chunk(
-                    file_id=file.id,
-                    sortindex=len(chunks),
+                    document_id=file.id,
+                    sort_index=len(chunks),
                     level=section.level,
                     headings=section.headings,
                     content=content,
-                    start_index=group[0].start_line,
-                    end_index=group[-1].end_line,
+                    start_line=group[0].start_line,
+                    end_line=group[-1].end_line,
                     hash=hashlib.sha256(content.encode("utf-8")).hexdigest(),
                 )
             )

@@ -10,6 +10,29 @@ SHA256_HASH_LENGTH = 64
 UUID4_LENGTH = 36
 
 
+def test_id_should_not_change(tmp_path):
+    file = tmp_path / "test.md"
+    content = string.ascii_letters
+    file.write_text(content, encoding="utf-8")
+
+    info = get_file_info_from_path(file)
+    info1 = get_file_info_from_path(file)
+
+    assert info.id == info1.id
+    assert info.hash == info1.hash
+
+
+def test_modify_file_hash_should_change(tmp_path):
+    file = tmp_path / "test.md"
+    content = string.ascii_letters
+    file.write_text(content, encoding="utf-8")
+    info = get_file_info_from_path(file)
+    with file.open("a", encoding="utf-8") as f:
+        f.write("追加的内容")
+    info1 = get_file_info_from_path(file)
+    assert info.hash != info1.hash
+
+
 def test_get_file_info_from_path_should_work(tmp_path):
     file = tmp_path / "test.md"
     content = string.ascii_letters

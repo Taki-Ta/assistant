@@ -33,9 +33,21 @@ def test_split_file_uses_headings_and_keeps_source_lines():
         ("Python", "模块", "导入"),
     ]
     assert [chunk.level for chunk in chunks] == [1, 2, 3]
-    assert (chunks[1].start_index, chunks[1].end_index) == (5, 7)
-    assert all(chunk.file_id == file.id for chunk in chunks)
-    assert [chunk.sortindex for chunk in chunks] == [0, 1, 2]
+    assert (chunks[1].start_line, chunks[1].end_line) == (5, 7)
+    assert all(chunk.document_id == file.id for chunk in chunks)
+    assert [chunk.sort_index for chunk in chunks] == [0, 1, 2]
+
+
+def test_chunk_from_split_file_should_not_change():
+    file = make_file(
+        "# Python\n\n基础。\n\n## 模块\n\n模块内容。\n\n### 导入\n\n导入内容。"
+    )
+
+    chunks = split_file(file, max_chunk_length=100)
+    chunks1 = split_file(file, max_chunk_length=100)
+
+    for i in range(len(chunks)):
+        assert chunks[i].id == chunks1[i].id
 
 
 def test_split_file_respects_maximum_length():
