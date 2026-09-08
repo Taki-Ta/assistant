@@ -1,0 +1,29 @@
+[project]
+name = "interview_ai"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "typer>=0.27.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.6",
+]
+
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+
+[project.scripts]
+interview_ai = "interview_ai.cli:app"
+
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
