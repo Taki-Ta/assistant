@@ -7,9 +7,9 @@ from .models import (
     TIME_ZONE_LOCAL,
     ChangeSet,
     Chunk,
+    Document,
     Manifest,
     ManifestPipeline,
-    Document,
 )
 
 MANIFEST_DIR = "manifest"

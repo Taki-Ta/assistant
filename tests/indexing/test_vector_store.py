@@ -1,8 +1,9 @@
+from pathlib import Path
 from uuid import UUID
 
 import pytest
 
-from interview_ai.indexing.models import VectorRecord
+from interview_ai.indexing.models import ChunkMetadata, VectorRecord
 from interview_ai.indexing.vector_store import InMemoryVectorStore
 
 TEST_DATA = [
@@ -61,7 +62,18 @@ TEST_DATA = [
 
 def make_records() -> list[VectorRecord]:
     return [
-        VectorRecord(UUID(chunk_id), vector.copy(), content)
+        VectorRecord(
+            chunk_id=UUID(chunk_id),
+            vector=vector.copy(),
+            document_id=UUID("550e8400-e29b-41d4-a716-446655440000"),
+            content=content,
+            metadata=ChunkMetadata(
+                path=Path("knowledge.md"),
+                headings=("Knowledge",),
+                start_line=1,
+                end_line=1,
+            ),
+        )
         for chunk_id, vector, content in TEST_DATA
     ]
 
@@ -90,7 +102,9 @@ def test_upsert_replaces_record_with_same_chunk_id(store, records):
     replacement = VectorRecord(
         chunk_id=records[0].chunk_id,
         vector=[0.0, 0.0, 0.0, 0.0, 1.0],
+        document_id=records[0].document_id,
         content="更新后的内容",
+        metadata=records[0].metadata,
     )
 
     store.upsert([replacement])

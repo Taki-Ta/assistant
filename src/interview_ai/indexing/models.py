@@ -6,7 +6,7 @@ from uuid import UUID
 @dataclass
 class ChunkMetadata:
     path: Path
-    headings: list[str]
+    headings: tuple[str, ...]
     start_line: int
     end_line: int
 
@@ -15,9 +15,9 @@ class ChunkMetadata:
 class VectorRecord:
     chunk_id: UUID
     vector: list[float]
-    # document_id: UUID
+    document_id: UUID
     content: str
-    # metadata: ChunkMetadata
+    metadata: ChunkMetadata
 
 
 @dataclass

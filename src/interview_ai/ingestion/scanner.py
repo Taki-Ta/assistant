@@ -66,9 +66,7 @@ def get_file_info_from_path(path: Path) -> Document:
         )
 
 
-def split_file(
-    file: Document, max_chunk_length: int = MAX_CHUNK_LENGTH
-) -> list[Chunk]:
+def split_file(file: Document, max_chunk_length: int = MAX_CHUNK_LENGTH) -> list[Chunk]:
     """按 Markdown 标题和段落切块，索引字段表示从 1 开始的源文件行号。"""
     if max_chunk_length <= 0:
         raise ValueError("max_chunk_length 必须大于 0")
@@ -188,9 +186,7 @@ def _pack_blocks(blocks: list[_Block], max_chunk_length: int) -> list[list[_Bloc
     return groups
 
 
-def _scan_file(
-    path: Path, files: list[Document] | None = None
-) -> list[Document]:
+def _scan_file(path: Path, files: list[Document] | None = None) -> list[Document]:
     """接收一个文件夹路径,返回路径下所有md格式的文件"""
     if files is None:
         files = []
