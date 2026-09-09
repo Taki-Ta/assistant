@@ -9,6 +9,15 @@ TIME_ZONE_LOCAL = timezone(timedelta(hours=8))
 MAX_CHUNK_LENGTH = 500
 
 
+@dataclass(frozen=True)
+class ChangeSet:
+    added: tuple[str, ...]
+    modified: tuple[str, ...]
+    unchanged: tuple[str, ...]
+    deleted: tuple[str, ...]
+    pipeline_changed: bool = False
+
+
 @dataclass
 class MarkdownFile:
     id: UUID = field(init=False)

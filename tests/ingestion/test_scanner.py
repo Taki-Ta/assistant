@@ -87,3 +87,17 @@ def test_scan_path_should_work(tmp_path):
 
     files = scan_path(tmp_path)
     assert len(files) == 3
+
+
+def test_scan_path_should_ignore_cache_directories(tmp_path):
+    expected_file = tmp_path / "knowledge.md"
+    expected_file.write_text("# Knowledge", encoding="utf-8")
+
+    for directory_name in (".pytest_cache", ".ruff_cache", "__pycache__"):
+        cache_directory = tmp_path / directory_name
+        cache_directory.mkdir()
+        (cache_directory / "README.md").write_text("cache", encoding="utf-8")
+
+    files = scan_path(tmp_path)
+
+    assert [file.path for file in files] == [expected_file]

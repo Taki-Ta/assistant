@@ -5,6 +5,7 @@ from pathlib import Path
 from .models import (
     MAX_CHUNK_LENGTH,
     TIME_ZONE_LOCAL,
+    ChangeSet,
     Chunk,
     Manifest,
     ManifestPipeline,
@@ -13,6 +14,49 @@ from .models import (
 
 MANIFEST_DIR = "manifest"
 logger = logging.getLogger(__name__)
+
+
+def compare_manifests(
+    old_manifest: Manifest | None,
+    new_manifest: Manifest,
+) -> ChangeSet:
+    """比较已索引快照与当前候选快照，生成只读变更计划。"""
+    if old_manifest is None:
+        return ChangeSet(
+            added=tuple(sorted(new_manifest.documents)),
+            modified=(),
+            unchanged=(),
+            deleted=(),
+        )
+
+    if old_manifest.source_root.resolve() != new_manifest.source_root.resolve():
+        raise ValueError("不能比较不同知识库根目录的 Manifest")
+
+    old_paths = set(old_manifest.documents)
+    new_paths = set(new_manifest.documents)
+    added = new_paths - old_paths
+    deleted = old_paths - new_paths
+    common = old_paths & new_paths
+    pipeline_changed = old_manifest.pipeline != new_manifest.pipeline
+    modified: set[str] = set()
+    unchanged: set[str] = set()
+
+    for path in common:
+        old_document = old_manifest.documents[path]
+        new_document = new_manifest.documents[path]
+        content_changed = old_document["content_hash"] != new_document["content_hash"]
+        if content_changed or pipeline_changed:
+            modified.add(path)
+        else:
+            unchanged.add(path)
+
+    return ChangeSet(
+        added=tuple(sorted(added)),
+        modified=tuple(sorted(modified)),
+        unchanged=tuple(sorted(unchanged)),
+        deleted=tuple(sorted(deleted)),
+        pipeline_changed=pipeline_changed,
+    )
 
 
 def generate_manifest(

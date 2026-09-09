@@ -7,7 +7,14 @@ from pathlib import Path
 
 from .models import MAX_CHUNK_LENGTH, TIME_ZONE_LOCAL, Chunk, MarkdownFile
 
-IGNORE_DIRS = [".git", ".venv", "assistant"]
+IGNORE_DIRS = [
+    ".git",
+    ".venv",
+    ".pytest_cache",
+    ".ruff_cache",
+    "__pycache__",
+    "assistant",
+]
 
 MAX_MARKDOWN_TITLE_LEVEL = 6
 TITLE_REGEX = re.compile(r"^ {0,3}(#{1,6})[ \t]+(.+?)[ \t]*#*[ \t]*$")
