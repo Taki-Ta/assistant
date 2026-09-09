@@ -2,7 +2,8 @@ from uuid import UUID
 
 import pytest
 
-from interview_ai.indexing.models import InMemoryVectorStore, VectorRecord
+from interview_ai.indexing.models import VectorRecord
+from interview_ai.indexing.vector_store import InMemoryVectorStore
 
 TEST_DATA = [
     (
