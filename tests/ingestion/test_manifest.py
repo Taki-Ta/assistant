@@ -2,6 +2,7 @@ import json
 from dataclasses import asdict
 
 import pytest
+
 from interview_ai.ingestion.manifest import (
     compare_manifests,
     generate_manifest,

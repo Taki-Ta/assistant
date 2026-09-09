@@ -1,6 +1,6 @@
 import pytest
-from interview_ai.ingestion.scanner import split_file
 
+from interview_ai.ingestion.scanner import split_file
 from tests.ingestion.util import make_file
 
 
