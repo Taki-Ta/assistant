@@ -9,7 +9,7 @@ from .models import (
     Chunk,
     Manifest,
     ManifestPipeline,
-    MarkdownFile,
+    Document,
 )
 
 MANIFEST_DIR = "manifest"
@@ -61,7 +61,7 @@ def compare_manifests(
 
 def generate_manifest(
     root: Path,
-    documents: list[MarkdownFile],
+    documents: list[Document],
     chunks: list[Chunk],
     *,
     max_chunk_length: int = MAX_CHUNK_LENGTH,
@@ -75,7 +75,7 @@ def generate_manifest(
 
 
 def generate_manifest_dict(
-    documents: list[MarkdownFile],
+    documents: list[Document],
     chunks: list[Chunk],
     *,
     root: Path | None = None,

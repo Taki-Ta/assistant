@@ -19,7 +19,7 @@ class ChangeSet:
 
 
 @dataclass
-class MarkdownFile:
+class Document:
     id: UUID = field(init=False)
     path: Path
     name: str
