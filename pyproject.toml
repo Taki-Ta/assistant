@@ -5,7 +5,9 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "fastapi[standard]>=0.141.1",
     "openai>=3.10.0",
+    "pyjwt>=2.13.0",
     "python-dotenv>=1.2.3",
     "typer>=0.27.2",
 ]
@@ -21,8 +23,8 @@ dev = [
 pythonpath = ["src"]
 testpaths = ["tests"]
 
-markers=[
-    "network : tests that require network access "
+markers = [
+    "network: tests that require network access",
 ]
 
 
