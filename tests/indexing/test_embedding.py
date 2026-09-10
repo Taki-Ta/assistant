@@ -19,7 +19,7 @@ def provider():
             dimensions=config.dimensions,
         )
 
-
+@pytest.mark.network
 def test_openai_embedding_provider_should_work(provider):
     texts = ["风急天高猿啸哀", "渚清沙白鸟飞回", "无边落木萧萧下", "不尽长江滚滚来"]
 

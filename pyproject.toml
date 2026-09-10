@@ -21,6 +21,10 @@ dev = [
 pythonpath = ["src"]
 testpaths = ["tests"]
 
+markers=[
+    "network : tests that require network access "
+]
+
 
 [project.scripts]
 interview_ai = "interview_ai.cli:app"

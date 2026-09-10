@@ -17,6 +17,7 @@ def make_service(vectors):
     return service, embedding_provider, vector_store
 
 
+@pytest.mark.network
 def test_index_builds_vector_records_and_writes_them_once(tmp_path):
     document = make_file(
         "# Python\n\n基础内容。\n\n## 异常\n\n异常处理。",
@@ -84,6 +85,7 @@ def test_index_rejects_embedding_count_mismatch(tmp_path):
     vector_store.upsert.assert_not_called()
 
 
+@pytest.mark.network
 def test_index_matches_each_chunk_to_its_own_document(tmp_path):
     first_document = make_file("# Python", tmp_path / "python.md")
     second_document = make_file("# Java", tmp_path / "java.md")
