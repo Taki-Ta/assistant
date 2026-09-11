@@ -5,16 +5,21 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "asyncpg>=0.31.0",
     "fastapi[standard]>=0.141.1",
     "openai>=3.10.0",
     "pyjwt>=2.13.0",
     "python-dotenv>=1.2.3",
+    "sqlalchemy>=2.0.52",
+    "sqlmodel>=0.0.42",
     "typer>=0.27.2",
+    "uuid6>=2025.0.1",
 ]
 
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
     "ruff>=0.16.6",
 ]
 

@@ -2,8 +2,8 @@
 
 # from dotenv import load_dotenv
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     is_debug: bool = Field(default=False, alias="IS_DEBUG")
     jwt_secret: str = Field(alias="JWT_SECRET")
     jwt_exp: float = Field(default=300, alias="JWT_EXP_SECONDS")
+    database_url: str = Field(alias="DATABASE_URL")
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
