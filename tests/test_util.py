@@ -9,13 +9,14 @@ from interview_ai.util import JWT_ALGORITHM, jwt_encode, jwt_verify
 
 @pytest.fixture(autouse=True)
 def jwt_config(monkeypatch):
-    monkeypatch.setattr(config, "jwt_secret", "test-only-secret-with-at-least-32-bytes")
-    monkeypatch.setattr(config, "jwt_exp", 300)
+    # monkeypatch.setattr(config, "jwt_secret", "test-only-secret-with-at-least-32-bytes")
+    monkeypatch.setattr(config, "jwt_exp", 30000000)
 
 
 def test_jwt_round_trip_includes_required_claims():
     payload = {"sub": "user-001", "role": "admin"}
 
+    print(jwt_encode(payload))
     decoded = jwt_verify(jwt_encode(payload))
 
     assert decoded["sub"] == "user-001"

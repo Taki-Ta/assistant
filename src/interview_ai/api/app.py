@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
-from interview_ai.api.routes.health import public_router
+from interview_ai.api.routes.document import router as document_router
+from interview_ai.api.routes.health import router as health_router
 from interview_ai.api.routes.index import protected_router
 from interview_ai.config import config
 
@@ -12,8 +13,9 @@ def create_app() -> FastAPI:
         docs_url="/docs" if config.is_debug else None,
         redoc_url="/redoc" if config.is_debug else None,
     )
-    app.include_router(public_router)
+    app.include_router(health_router)
     app.include_router(protected_router)
+    app.include_router(document_router)
     return app
 
 

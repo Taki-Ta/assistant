@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from interview_ai.ingestion.models import Chunk, Document
+from interview_ai.ingestion.models import Chunk, LocalDocument
 
 from .embedding import EmbeddingProvider
 from .models import ChunkMetadata, VectorRecord
@@ -12,7 +12,7 @@ class IndexService:
     embedding_provider: EmbeddingProvider
     vector_store: VectorStore
 
-    def index(self, documents: list[Document], chunks: list[Chunk]) -> int:
+    def index(self, documents: list[LocalDocument], chunks: list[Chunk]) -> int:
         """为一批 Chunk 生成向量并写入向量存储。"""
         if not chunks:
             return 0

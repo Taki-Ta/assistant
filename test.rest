@@ -1,0 +1,27 @@
+
+@host = 127.0.0.1:8000
+@prefix=api/v1
+
+@token=
+GET http://{{host}}/{{prefix}}/documents
+Authorization: Bearer {{token}}
+
+### 
+POST http://{{host}}/{{prefix}}/documents
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data;boundary=file1
+
+--file1
+Content-Disposition: form-data; name="file"; filename="test.md"
+Content-Type: text/markdown
+
+< ./docs/progress.md
+
+--file1--
+
+
+
+
+###
+GET http://{{host}}/{{prefix}}/test
+Authorization: Bearer {{token}}
