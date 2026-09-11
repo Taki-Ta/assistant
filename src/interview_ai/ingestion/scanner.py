@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from .models import MAX_CHUNK_LENGTH, TIME_ZONE_LOCAL, Chunk, Document
+from .models import MAX_CHUNK_LENGTH, TIME_ZONE_LOCAL, Chunk, LocalDocument
 
 IGNORE_DIRS = [
     ".git",
@@ -35,7 +35,7 @@ class _Section:
     lines: list[tuple[int, str]]
 
 
-def scan_path(path: Path) -> list[Document]:
+def scan_path(path: Path) -> list[LocalDocument]:
     """接收一个路径,返回路径下所有md格式的文件"""
     if not Path.exists(path):
         raise FileNotFoundError("文件不存在")
@@ -47,7 +47,7 @@ def scan_path(path: Path) -> list[Document]:
     return _scan_file(path, [])
 
 
-def get_file_info_from_path(path: Path) -> Document:
+def get_file_info_from_path(path: Path) -> LocalDocument:
     """根据文件路径获取文件信息"""
     if not Path.exists(path) or not Path.is_file(path):
         raise FileNotFoundError("文件不存在")
@@ -55,18 +55,20 @@ def get_file_info_from_path(path: Path) -> Document:
         info = path.stat()
         content = f.read()
         content_bytes = content.encode("utf-8")
-        return Document(
-            path,
-            path.name,
-            datetime.fromtimestamp(info.st_birthtime, TIME_ZONE_LOCAL),
-            datetime.fromtimestamp(info.st_mtime, TIME_ZONE_LOCAL),
-            info.st_size,
-            content,
-            hashlib.sha256(content_bytes).hexdigest(),
+        return LocalDocument(
+            path=path,
+            name=path.name,
+            create_time=datetime.fromtimestamp(info.st_birthtime, TIME_ZONE_LOCAL),
+            modify_time=datetime.fromtimestamp(info.st_mtime, TIME_ZONE_LOCAL),
+            size=info.st_size,
+            content=content,
+            hash=hashlib.sha256(content_bytes).hexdigest(),
         )
 
 
-def split_file(file: Document, max_chunk_length: int = MAX_CHUNK_LENGTH) -> list[Chunk]:
+def split_file(
+    file: LocalDocument, max_chunk_length: int = MAX_CHUNK_LENGTH
+) -> list[Chunk]:
     """按 Markdown 标题和段落切块，索引字段表示从 1 开始的源文件行号。"""
     if max_chunk_length <= 0:
         raise ValueError("max_chunk_length 必须大于 0")
@@ -186,7 +188,9 @@ def _pack_blocks(blocks: list[_Block], max_chunk_length: int) -> list[list[_Bloc
     return groups
 
 
-def _scan_file(path: Path, files: list[Document] | None = None) -> list[Document]:
+def _scan_file(
+    path: Path, files: list[LocalDocument] | None = None
+) -> list[LocalDocument]:
     """接收一个文件夹路径,返回路径下所有md格式的文件"""
     if files is None:
         files = []

@@ -2,13 +2,13 @@ import hashlib
 from datetime import UTC, datetime
 from pathlib import Path
 
-from interview_ai.ingestion.models import Document
+from interview_ai.ingestion.models import LocalDocument
 
 
-def make_file(content: str, path: Path | None = None) -> Document:
+def make_file(content: str, path: Path | None = None) -> LocalDocument:
     now = datetime.now(UTC)
     path = path or Path("knowledge.md")
-    return Document(
+    return LocalDocument(
         path=path,
         name=path.name,
         create_time=now,

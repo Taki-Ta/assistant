@@ -7,7 +7,7 @@ from .models import (
     TIME_ZONE_LOCAL,
     ChangeSet,
     Chunk,
-    Document,
+    LocalDocument,
     Manifest,
     ManifestPipeline,
 )
@@ -61,7 +61,7 @@ def compare_manifests(
 
 def generate_manifest(
     root: Path,
-    documents: list[Document],
+    documents: list[LocalDocument],
     chunks: list[Chunk],
     *,
     max_chunk_length: int = MAX_CHUNK_LENGTH,
@@ -75,7 +75,7 @@ def generate_manifest(
 
 
 def generate_manifest_dict(
-    documents: list[Document],
+    documents: list[LocalDocument],
     chunks: list[Chunk],
     *,
     root: Path | None = None,

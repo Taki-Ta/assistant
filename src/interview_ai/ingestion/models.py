@@ -19,17 +19,19 @@ class ChangeSet:
 
 
 @dataclass
-class Document:
+class LocalDocument:
+    """本地扫描期间使用的文档，不映射到 PostgreSQL。"""
+
     id: UUID = field(init=False)
     path: Path
     name: str
     create_time: datetime
     modify_time: datetime
-    size: float
+    size: int
     content: str
     hash: str
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.id = uuid5(NAMESPACE_URL, self.path.resolve().as_uri())
 
 
