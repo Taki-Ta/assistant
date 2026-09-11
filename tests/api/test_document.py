@@ -59,7 +59,7 @@ def test_documents_endpoint_returns_markdown_from_postgres() -> None:
         updated_at=now,
     )
 
-    response = _client(_DatabaseSession([document])).get("/api/v1/document")
+    response = _client(_DatabaseSession([document])).get("/api/v1/documents")
 
     assert response.status_code == 200
     payload = response.json()[0]
@@ -74,7 +74,7 @@ def test_upload_markdown_saves_content_and_generates_uuid7() -> None:
     content = "# Python\n\n基础内容。".encode()
 
     response = _client(session).post(
-        "/api/v1/document",
+        "/api/v1/documents",
         files={"file": ("python.md", content, "text/markdown")},
     )
 
@@ -90,7 +90,7 @@ def test_upload_markdown_saves_content_and_generates_uuid7() -> None:
 
 def test_upload_rejects_non_markdown_file() -> None:
     response = _client(_DatabaseSession()).post(
-        "/api/v1/document",
+        "/api/v1/documents",
         files={"file": ("notes.txt", b"notes", "text/plain")},
     )
 
@@ -99,7 +99,7 @@ def test_upload_rejects_non_markdown_file() -> None:
 
 def test_upload_rejects_non_utf8_markdown() -> None:
     response = _client(_DatabaseSession()).post(
-        "/api/v1/document",
+        "/api/v1/documents",
         files={"file": ("notes.md", b"\xff\xfe", "text/markdown")},
     )
 

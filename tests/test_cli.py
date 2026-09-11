@@ -4,7 +4,7 @@ from typer.testing import CliRunner
 
 from interview_ai.cli import app
 from interview_ai.ingestion.manifest import generate_manifest, save_manifest
-from interview_ai.ingestion.scanner import scan_path, split_file
+from interview_ai.ingestion.scanner import scan_path, split_document
 
 runner = CliRunner()
 
@@ -29,7 +29,7 @@ def test_plan_compares_with_existing_manifest(tmp_path):
     root.mkdir()
     (root / "python.md").write_text("# Python", encoding="utf-8")
     documents = scan_path(root)
-    chunks = [chunk for document in documents for chunk in split_file(document)]
+    chunks = [chunk for document in documents for chunk in split_document(document)]
     manifest = generate_manifest(root, documents, chunks)
     manifest_path = save_manifest(manifest, tmp_path / "manifests")
 

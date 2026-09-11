@@ -2,11 +2,12 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+from interview_ai.db.models import Chunk
+
 from .models import (
     MAX_CHUNK_LENGTH,
     TIME_ZONE_LOCAL,
     ChangeSet,
-    Chunk,
     LocalDocument,
     Manifest,
     ManifestPipeline,

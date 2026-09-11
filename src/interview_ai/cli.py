@@ -10,7 +10,7 @@ from .ingestion.manifest import (
     load_manifest,
 )
 from .ingestion.models import MAX_CHUNK_LENGTH, ChangeSet
-from .ingestion.scanner import scan_path, split_file
+from .ingestion.scanner import scan_path, split_document
 
 app = typer.Typer()
 
@@ -70,7 +70,7 @@ def plan(
         chunks = [
             chunk
             for document in documents
-            for chunk in split_file(document, max_chunk_length=max_chunk_length)
+            for chunk in split_document(document, max_chunk_length=max_chunk_length)
         ]
         current_manifest = generate_manifest(
             path,

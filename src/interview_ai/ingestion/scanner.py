@@ -4,8 +4,12 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from uuid import NAMESPACE_URL, uuid5
 
-from .models import MAX_CHUNK_LENGTH, TIME_ZONE_LOCAL, Chunk, LocalDocument
+from interview_ai.core.protocols import IndexableDocument
+from interview_ai.db.models import Chunk
+
+from .models import MAX_CHUNK_LENGTH, TIME_ZONE_LOCAL, LocalDocument
 
 IGNORE_DIRS = [
     ".git",
@@ -66,30 +70,34 @@ def get_file_info_from_path(path: Path) -> LocalDocument:
         )
 
 
-def split_file(
-    file: LocalDocument, max_chunk_length: int = MAX_CHUNK_LENGTH
+def split_document(
+    document: IndexableDocument, max_chunk_length: int = MAX_CHUNK_LENGTH
 ) -> list[Chunk]:
     """按 Markdown 标题和段落切块，索引字段表示从 1 开始的源文件行号。"""
     if max_chunk_length <= 0:
         raise ValueError("max_chunk_length 必须大于 0")
-    if not file.content:
+    if not document.content:
         return []
 
     chunks: list[Chunk] = []
-    for section in _split_sections(file.content):
+    for section in _split_sections(document.content):
         blocks = _split_paragraphs(section.lines, max_chunk_length)
         for group in _pack_blocks(blocks, max_chunk_length):
             content = "\n\n".join(block.content for block in group)
+            content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
+            sort_index = len(chunks)
+            identity = f"{document.id}-{sort_index}-{content_hash}"
             chunks.append(
                 Chunk(
-                    document_id=file.id,
-                    sort_index=len(chunks),
+                    id=uuid5(NAMESPACE_URL, identity),
+                    document_id=document.id,
+                    sort_index=sort_index,
                     level=section.level,
                     headings=section.headings,
                     content=content,
                     start_line=group[0].start_line,
                     end_line=group[-1].end_line,
-                    hash=hashlib.sha256(content.encode("utf-8")).hexdigest(),
+                    hash=content_hash,
                 )
             )
     return chunks

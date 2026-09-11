@@ -1,6 +1,7 @@
 from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from uuid import UUID
 
 import jwt
 
@@ -31,3 +32,11 @@ def jwt_encode(payload: Mapping[str, Any]) -> str:
 
     claims["exp"] = datetime.now(UTC) + timedelta(seconds=config.jwt_exp)
     return jwt.encode(claims, _jwt_secret(), algorithm=JWT_ALGORITHM)
+
+
+def is_uuid(value: str) -> bool:
+    try:
+        UUID(value)
+        return True
+    except Exception:
+        return False

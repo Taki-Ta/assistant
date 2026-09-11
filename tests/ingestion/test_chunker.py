@@ -1,15 +1,15 @@
 import pytest
 
-from interview_ai.ingestion.scanner import split_file
+from interview_ai.ingestion.scanner import split_document
 from tests.ingestion.util import make_file
 
 
-def test_split_file_uses_headings_and_keeps_source_lines():
+def test_split_document_uses_headings_and_keeps_source_lines():
     file = make_file(
         "# Python\n\n基础。\n\n## 模块\n\n模块内容。\n\n### 导入\n\n导入内容。"
     )
 
-    chunks = split_file(file, max_chunk_length=100)
+    chunks = split_document(file, max_chunk_length=100)
 
     assert [chunk.headings for chunk in chunks] == [
         ("Python",),
@@ -22,20 +22,20 @@ def test_split_file_uses_headings_and_keeps_source_lines():
     assert [chunk.sort_index for chunk in chunks] == [0, 1, 2]
 
 
-def test_chunk_from_split_file_should_not_change():
+def test_chunk_from_split_document_should_not_change():
     file = make_file(
         "# Python\n\n基础。\n\n## 模块\n\n模块内容。\n\n### 导入\n\n导入内容。"
     )
 
-    chunks = split_file(file, max_chunk_length=100)
-    chunks1 = split_file(file, max_chunk_length=100)
+    chunks = split_document(file, max_chunk_length=100)
+    chunks1 = split_document(file, max_chunk_length=100)
 
     for i in range(len(chunks)):
         assert chunks[i].id == chunks1[i].id
 
 
-def test_split_file_respects_maximum_length():
-    chunks = split_file(make_file("# 标题\n\n" + "a" * 25), max_chunk_length=10)
+def test_split_document_respects_maximum_length():
+    chunks = split_document(make_file("# 标题\n\n" + "a" * 25), max_chunk_length=10)
 
     assert len(chunks) > 1
     assert all(len(chunk.content) <= 10 for chunk in chunks)
@@ -45,15 +45,15 @@ def test_split_file_respects_maximum_length():
 def test_heading_inside_code_fence_does_not_start_section():
     file = make_file("# Python\n\n```python\n# 不是标题\nprint('ok')\n```")
 
-    chunks = split_file(file, max_chunk_length=100)
+    chunks = split_document(file, max_chunk_length=100)
 
     assert len(chunks) == 1
     assert chunks[0].headings == ("Python",)
     assert "# 不是标题" in chunks[0].content
 
 
-def test_split_file_handles_empty_content_and_invalid_length():
-    assert split_file(make_file("")) == []
+def test_split_document_handles_empty_content_and_invalid_length():
+    assert split_document(make_file("")) == []
 
     with pytest.raises(ValueError, match="max_chunk_length"):
-        split_file(make_file("content"), max_chunk_length=0)
+        split_document(make_file("content"), max_chunk_length=0)

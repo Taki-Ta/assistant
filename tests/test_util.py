@@ -9,8 +9,8 @@ from interview_ai.util import JWT_ALGORITHM, jwt_encode, jwt_verify
 
 @pytest.fixture(autouse=True)
 def jwt_config(monkeypatch):
-    # monkeypatch.setattr(config, "jwt_secret", "test-only-secret-with-at-least-32-bytes")
-    monkeypatch.setattr(config, "jwt_exp", 30000000)
+    monkeypatch.setattr(config, "jwt_secret", "test-only-secret-with-at-least-32-bytes")
+    monkeypatch.setattr(config, "jwt_exp", 300)
 
 
 def test_jwt_round_trip_includes_required_claims():

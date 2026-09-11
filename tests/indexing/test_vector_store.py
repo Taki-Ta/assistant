@@ -1,10 +1,10 @@
-from pathlib import Path
 from uuid import UUID
 
 import pytest
+import pytest_asyncio
 
-from interview_ai.indexing.models import ChunkMetadata, VectorRecord
-from interview_ai.indexing.vector_store import InMemoryVectorStore
+from interview_ai.db.models import VectorRecord
+from interview_ai.indexing.vector_store.local_vector_store import InMemoryVectorStore
 
 TEST_DATA = [
     (
@@ -65,16 +65,9 @@ def make_records() -> list[VectorRecord]:
         VectorRecord(
             chunk_id=UUID(chunk_id),
             vector=vector.copy(),
-            document_id=UUID("550e8400-e29b-41d4-a716-446655440000"),
-            content=content,
-            metadata=ChunkMetadata(
-                path=Path("knowledge.md"),
-                headings=("Knowledge",),
-                start_line=1,
-                end_line=1,
-            ),
+            embedding_model="test-embedding",
         )
-        for chunk_id, vector, content in TEST_DATA
+        for chunk_id, vector, _ in TEST_DATA
     ]
 
 
@@ -83,54 +76,57 @@ def records():
     return make_records()
 
 
-@pytest.fixture
-def store(records):
+@pytest_asyncio.fixture
+async def store(records):
     vector_store = InMemoryVectorStore()
-    vector_store.upsert(records)
+    await vector_store.upsert(records)
     return vector_store
 
 
-def test_upsert_inserts_records_without_duplicates(store, records):
+@pytest.mark.asyncio
+async def test_upsert_inserts_records_without_duplicates(store, records):
     assert len(store.inner) == 10
 
-    store.upsert(records)
+    await store.upsert(records)
 
     assert len(store.inner) == 10
 
 
-def test_upsert_replaces_record_with_same_chunk_id(store, records):
+@pytest.mark.asyncio
+async def test_upsert_replaces_record_with_same_chunk_id(store, records):
     replacement = VectorRecord(
         chunk_id=records[0].chunk_id,
         vector=[0.0, 0.0, 0.0, 0.0, 1.0],
-        document_id=records[0].document_id,
-        content="更新后的内容",
-        metadata=records[0].metadata,
+        embedding_model="replacement-embedding",
     )
 
-    store.upsert([replacement])
+    await store.upsert([replacement])
 
     assert len(store.inner) == 10
     assert store.inner[0] is replacement
-    assert store.inner[0].content == "更新后的内容"
+    assert store.inner[0].embedding_model == "replacement-embedding"
 
 
-def test_delete_removes_existing_records(store, records):
+@pytest.mark.asyncio
+async def test_delete_removes_existing_records(store, records):
     ids = [item.chunk_id for item in records[:3]]
 
-    store.delete(ids)
+    await store.delete(ids)
 
     assert len(store.inner) == 7
     assert not set(ids) & {item.chunk_id for item in store.inner}
 
 
-def test_delete_ignores_unknown_id(store):
-    store.delete([UUID("550e8400-e29b-41d4-a716-446655449999")])
+@pytest.mark.asyncio
+async def test_delete_ignores_unknown_id(store):
+    await store.delete([UUID("550e8400-e29b-41d4-a716-446655449999")])
 
     assert len(store.inner) == 10
 
 
-def test_search_returns_results_ordered_by_similarity(store, records):
-    result = store.search(records[0].vector, limit=3)
+@pytest.mark.asyncio
+async def test_search_returns_results_ordered_by_similarity(store, records):
+    result = await store.search(records[0].vector, limit=3)
 
     assert len(result) == 3
     assert result[0].chunk_id == records[0].chunk_id
@@ -140,24 +136,28 @@ def test_search_returns_results_ordered_by_similarity(store, records):
     )
 
 
-def test_search_limits_result_count(store, records):
-    result = store.search(records[0].vector, limit=100)
+@pytest.mark.asyncio
+async def test_search_limits_result_count(store, records):
+    result = await store.search(records[0].vector, limit=100)
 
     assert len(result) == len(records)
 
 
-def test_search_rejects_different_vector_dimensions(store):
+@pytest.mark.asyncio
+async def test_search_rejects_different_vector_dimensions(store):
     with pytest.raises(ValueError, match="向量长度不一致"):
-        store.search([0.0, 0.1], limit=3)
+        await store.search([0.0, 0.1], limit=3)
 
 
 @pytest.mark.parametrize("limit", [0, -1])
-def test_search_rejects_non_positive_limit(store, limit):
+@pytest.mark.asyncio
+async def test_search_rejects_non_positive_limit(store, limit):
     with pytest.raises(ValueError, match="limit 必须大于 0"):
-        store.search([1.0, 0.0, 0.0, 0.0, 0.0], limit)
+        await store.search([1.0, 0.0, 0.0, 0.0, 0.0], limit)
 
 
-def test_search_empty_store_returns_empty_result(records):
+@pytest.mark.asyncio
+async def test_search_empty_store_returns_empty_result(records):
     store = InMemoryVectorStore()
 
-    assert store.search(records[0].vector, limit=3) == []
+    assert await store.search(records[0].vector, limit=3) == []

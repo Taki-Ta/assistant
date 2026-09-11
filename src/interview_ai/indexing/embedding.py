@@ -1,10 +1,4 @@
-from typing import Protocol
-
 from openai import OpenAI
-
-
-class EmbeddingProvider(Protocol):
-    def embed(self, texts: list[str]) -> list[list[float]]: ...
 
 
 class OpenAIEmbeddingProvider:
@@ -17,6 +11,10 @@ class OpenAIEmbeddingProvider:
         self._client = client
         self._model = model
         self._dimensions = dimensions
+
+    @property
+    def model_name(self) -> str:
+        return self._model
 
     def embed(self, texts: list[str]) -> list[list[float]]:
         if not texts:

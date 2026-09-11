@@ -2,7 +2,8 @@
 @host = 127.0.0.1:8000
 @prefix=api/v1
 
-@token=
+@token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTAwMSIsInJvbGUiOiJhZG1pbiIsImV4cCI6MTgxOTEwOTQ4OX0.u_TdzGANVCs5cFq05lqhVuwwIcJD7MXD7QPsvSimwsE
+
 GET http://{{host}}/{{prefix}}/documents
 Authorization: Bearer {{token}}
 
@@ -12,7 +13,7 @@ Authorization: Bearer {{token}}
 Content-Type: multipart/form-data;boundary=file1
 
 --file1
-Content-Disposition: form-data; name="file"; filename="test.md"
+Content-Disposition: form-data; name="file"; filename="progress.md"
 Content-Type: text/markdown
 
 < ./docs/progress.md
@@ -24,4 +25,16 @@ Content-Type: text/markdown
 
 ###
 GET http://{{host}}/{{prefix}}/test
+# Authorization: Bearer {{token}}
+
+
+###
+POST http://{{host}}/{{prefix}}/index?document_id=123
 Authorization: Bearer {{token}}
+Content-Type: application/json
+
+
+###
+POST http://{{host}}/{{prefix}}/index?document_id=01a08f47-6c5e-71b6-91c1-5f63ba79288b
+Authorization: Bearer {{token}}
+Content-Type: application/json

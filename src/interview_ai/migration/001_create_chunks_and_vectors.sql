@@ -2,34 +2,7 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS vector;
 
-CREATE TABLE documents (
-    id UUID PRIMARY KEY,
-    owner_id VARCHAR(128) NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    content TEXT NOT NULL,
-    content_hash VARCHAR(64) NOT NULL,
-    size_bytes BIGINT NOT NULL,
-    mime_type VARCHAR(255) NOT NULL DEFAULT 'text/markdown',
-    status VARCHAR(32) NOT NULL DEFAULT 'uploaded',
-    error_message TEXT,
-    chunk_count INTEGER,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    indexed_at TIMESTAMPTZ,
-    CONSTRAINT ck_documents_size CHECK (size_bytes >= 0),
-    CONSTRAINT ck_documents_chunk_count
-        CHECK (chunk_count IS NULL OR chunk_count >= 0),
-    CONSTRAINT ck_documents_status
-        CHECK (status IN ('uploaded', 'parsing', 'indexing', 'indexed', 'failed'))
-);
-
-CREATE INDEX ix_documents_owner_updated
-    ON documents (owner_id, updated_at);
-
-CREATE INDEX ix_documents_status_updated
-    ON documents (status, updated_at);
-
-CREATE TABLE chunks (
+CREATE TABLE IF NOT EXISTS chunks (
     id UUID PRIMARY KEY,
     document_id UUID NOT NULL
         REFERENCES documents (id) ON DELETE CASCADE,
@@ -49,9 +22,9 @@ CREATE TABLE chunks (
     CONSTRAINT ck_chunks_line_range CHECK (end_line >= start_line)
 );
 
-CREATE INDEX ix_chunks_document_id ON chunks (document_id);
+CREATE INDEX IF NOT EXISTS ix_chunks_document_id ON chunks (document_id);
 
-CREATE TABLE vectors (
+CREATE TABLE IF NOT EXISTS vectors (
     chunk_id UUID PRIMARY KEY
         REFERENCES chunks (id) ON DELETE CASCADE,
     vector VECTOR(1536) NOT NULL,
@@ -60,7 +33,7 @@ CREATE TABLE vectors (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX ix_vectors_vector_hnsw
+CREATE INDEX IF NOT EXISTS ix_vectors_vector_hnsw
     ON vectors
     USING hnsw (vector vector_cosine_ops);
 

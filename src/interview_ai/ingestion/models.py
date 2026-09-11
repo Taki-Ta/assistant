@@ -35,23 +35,6 @@ class LocalDocument:
         self.id = uuid5(NAMESPACE_URL, self.path.resolve().as_uri())
 
 
-@dataclass
-class Chunk:
-    id: UUID = field(init=False)
-    document_id: UUID
-    sort_index: int
-    level: int
-    headings: tuple[str, ...]
-    content: str
-    start_line: int
-    end_line: int
-    hash: str
-
-    def __post_init__(self):
-        identity = f"{self.document_id}-{self.sort_index}-{self.hash}"
-        self.id = uuid5(NAMESPACE_URL, identity)
-
-
 class State(Enum):
     added = 1
     modified = 2

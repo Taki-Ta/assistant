@@ -2,17 +2,22 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from uuid import UUID
 
+from pgvector.sqlalchemy import VECTOR
 from sqlalchemy import (
     BigInteger,
     CheckConstraint,
     Column,
     DateTime,
+    ForeignKey,
     Index,
+    Integer,
     String,
     Text,
+    UniqueConstraint,
     func,
     text,
 )
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlmodel import Field, SQLModel
 from uuid6 import uuid7
 
@@ -61,9 +66,7 @@ class Document(SQLModel, table=True):
     )
     status: DocumentStatus = Field(
         default=DocumentStatus.UPLOADED,
-        sa_column=Column(
-            String(32), nullable=False, server_default=text("'uploaded'")
-        ),
+        sa_column=Column(String(32), nullable=False, server_default=text("'uploaded'")),
     )
     error_message: str | None = Field(
         default=None, sa_column=Column(Text, nullable=True)
@@ -87,4 +90,86 @@ class Document(SQLModel, table=True):
     indexed_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+
+
+class Chunk(SQLModel, table=True):
+    """Markdown 切块；向量本身由向量数据库保存。"""
+
+    __tablename__ = "chunks"
+    __table_args__ = (
+        UniqueConstraint(
+            "document_id",
+            "sort_index",
+            name="uq_chunks_document_sort_index",
+        ),
+        CheckConstraint("sort_index >= 0", name="ck_chunks_sort_index"),
+        CheckConstraint("level BETWEEN 0 AND 6", name="ck_chunks_level"),
+        CheckConstraint("start_line >= 1", name="ck_chunks_start_line"),
+        CheckConstraint("end_line >= start_line", name="ck_chunks_line_range"),
+        Index("ix_chunks_document_id", "document_id"),
+    )
+
+    id: UUID = Field(primary_key=True)
+    document_id: UUID = Field(
+        sa_column=Column(
+            ForeignKey("documents.id", ondelete="CASCADE"),
+            nullable=False,
+        )
+    )
+    sort_index: int = Field(sa_column=Column(Integer, nullable=False))
+    level: int = Field(sa_column=Column(Integer, nullable=False))
+    headings: tuple[str, ...] = Field(
+        default_factory=tuple,
+        sa_column=Column(ARRAY(Text), nullable=False),
+    )
+    content: str = Field(sa_column=Column(Text, nullable=False))
+    start_line: int = Field(sa_column=Column(Integer, nullable=False))
+    end_line: int = Field(sa_column=Column(Integer, nullable=False))
+    hash: str = Field(sa_column=Column("content_hash", String(64), nullable=False))
+    created_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(
+            DateTime(timezone=True), nullable=False, server_default=func.now()
+        ),
+    )
+
+
+class VectorRecord(SQLModel, table=True):
+    """Chunk 对应的向量；正文及结构化元数据保留在 chunks 表。"""
+
+    __tablename__ = "vectors"
+    __table_args__ = (
+        Index(
+            "ix_vectors_vector_hnsw",
+            "vector",
+            postgresql_using="hnsw",
+            postgresql_ops={"vector": "vector_cosine_ops"},
+        ),
+    )
+
+    chunk_id: UUID = Field(
+        sa_column=Column(
+            ForeignKey("chunks.id", ondelete="CASCADE"),
+            primary_key=True,
+        )
+    )
+    vector: list[float] = Field(
+        sa_column=Column(VECTOR(1536), nullable=False),
+    )
+    embedding_model: str = Field(sa_column=Column(String(128), nullable=False))
+    created_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(
+            DateTime(timezone=True), nullable=False, server_default=func.now()
+        ),
+    )
+    updated_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=False,
+            server_default=func.now(),
+            onupdate=func.now(),
+        ),
     )
