@@ -12,7 +12,7 @@ class InMemoryVectorStore:
     inner: list[VectorRecord] = field(init=False, default_factory=list)
 
     async def upsert(self, records: list[VectorRecord]) -> None:
-        """更新或新增向量"""
+        """更新或新增向量。"""
         for record in records:
             for index, stored_record in enumerate(self.inner):
                 if stored_record.chunk_id == record.chunk_id:

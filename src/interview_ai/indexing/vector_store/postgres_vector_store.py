@@ -9,7 +9,7 @@ from interview_ai.db.models import VectorRecord
 from ..models import SearchResult
 
 
-class PGVectorStore:
+class PostgresVectorStore:
     """使用 PostgreSQL pgvector 保存和检索 Chunk 向量。"""
 
     def __init__(self, db: AsyncSession) -> None:

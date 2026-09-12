@@ -14,7 +14,7 @@ from interview_ai.db.models import Document, DocumentStatus
 from interview_ai.db.repositories import PostgresChunkStore
 from interview_ai.indexing.embedding import OpenAIEmbeddingProvider
 from interview_ai.indexing.service import IndexService
-from interview_ai.indexing.vector_store.pg_vector_store import PGVectorStore
+from interview_ai.indexing.vector_store import PostgresVectorStore
 from interview_ai.ingestion.scanner import split_document
 
 router = APIRouter(prefix="/api/v1/index", tags=["index"])
@@ -43,7 +43,7 @@ def get_index_service(db: DatabaseSession) -> IndexService:
     return IndexService(
         embedding_provider=embedding_provider,
         chunk_store=PostgresChunkStore(db),
-        vector_store=PGVectorStore(db),
+        vector_store=PostgresVectorStore(db),
     )
 
 
