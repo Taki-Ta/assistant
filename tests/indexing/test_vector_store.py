@@ -78,7 +78,10 @@ def records():
 
 @pytest_asyncio.fixture
 async def store(records):
-    vector_store = InMemoryVectorStore()
+    vector_store = InMemoryVectorStore(
+        chunk_contents={UUID(chunk_id): content for chunk_id, _, content in TEST_DATA},
+        chunk_owners={UUID(chunk_id): "user-001" for chunk_id, _, _ in TEST_DATA},
+    )
     await vector_store.upsert(records)
     return vector_store
 
@@ -126,10 +129,15 @@ async def test_delete_ignores_unknown_id(store):
 
 @pytest.mark.asyncio
 async def test_search_returns_results_ordered_by_similarity(store, records):
-    result = await store.search(records[0].vector, limit=3)
+    result = await store.search(
+        records[0].vector,
+        owner_id="user-001",
+        limit=3,
+    )
 
     assert len(result) == 3
     assert result[0].chunk_id == records[0].chunk_id
+    assert result[0].content == TEST_DATA[0][2]
     assert result[0].score == pytest.approx(1.0)
     assert [item.score for item in result] == sorted(
         (item.score for item in result), reverse=True
@@ -138,7 +146,11 @@ async def test_search_returns_results_ordered_by_similarity(store, records):
 
 @pytest.mark.asyncio
 async def test_search_limits_result_count(store, records):
-    result = await store.search(records[0].vector, limit=100)
+    result = await store.search(
+        records[0].vector,
+        owner_id="user-001",
+        limit=100,
+    )
 
     assert len(result) == len(records)
 
@@ -146,18 +158,47 @@ async def test_search_limits_result_count(store, records):
 @pytest.mark.asyncio
 async def test_search_rejects_different_vector_dimensions(store):
     with pytest.raises(ValueError, match="向量长度不一致"):
-        await store.search([0.0, 0.1], limit=3)
+        await store.search([0.0, 0.1], owner_id="user-001", limit=3)
 
 
 @pytest.mark.parametrize("limit", [0, -1])
 @pytest.mark.asyncio
 async def test_search_rejects_non_positive_limit(store, limit):
     with pytest.raises(ValueError, match="limit 必须大于 0"):
-        await store.search([1.0, 0.0, 0.0, 0.0, 0.0], limit)
+        await store.search(
+            [1.0, 0.0, 0.0, 0.0, 0.0],
+            owner_id="user-001",
+            limit=limit,
+        )
+
+
+@pytest.mark.asyncio
+async def test_search_only_returns_chunks_owned_by_requested_user(records):
+    first_id = records[0].chunk_id
+    second_id = records[1].chunk_id
+    store = InMemoryVectorStore(
+        chunk_contents={
+            first_id: TEST_DATA[0][2],
+            second_id: TEST_DATA[1][2],
+        },
+        chunk_owners={
+            first_id: "user-001",
+            second_id: "user-002",
+        },
+    )
+    await store.upsert(records[:2])
+
+    results = await store.search(
+        records[0].vector,
+        owner_id="user-001",
+        limit=5,
+    )
+
+    assert [result.chunk_id for result in results] == [first_id]
 
 
 @pytest.mark.asyncio
 async def test_search_empty_store_returns_empty_result(records):
     store = InMemoryVectorStore()
 
-    assert await store.search(records[0].vector, limit=3) == []
+    assert await store.search(records[0].vector, owner_id="user-001", limit=3) == []

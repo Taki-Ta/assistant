@@ -76,14 +76,18 @@ def test_compare_manifests_detects_all_document_states(tmp_path):
     original_b = make_file("# B", tmp_path / "b.md")
     deleted = make_file("# Deleted", tmp_path / "deleted.md")
     old_documents = [original_a, original_b, deleted]
-    old_chunks = [chunk for document in old_documents for chunk in split_document(document)]
+    old_chunks = [
+        chunk for document in old_documents for chunk in split_document(document)
+    ]
     old_manifest = generate_manifest(tmp_path, old_documents, old_chunks)
 
     unchanged = make_file("# A", tmp_path / "a.md")
     modified = make_file("# B changed", tmp_path / "b.md")
     added = make_file("# Added", tmp_path / "added.md")
     new_documents = [unchanged, modified, added]
-    new_chunks = [chunk for document in new_documents for chunk in split_document(document)]
+    new_chunks = [
+        chunk for document in new_documents for chunk in split_document(document)
+    ]
     new_manifest = generate_manifest(tmp_path, new_documents, new_chunks)
 
     changes = compare_manifests(old_manifest, new_manifest)
@@ -124,8 +128,12 @@ def test_compare_manifests_ignores_document_metadata_changes(tmp_path):
     old_document = make_file("# Python", path)
     new_document = make_file("# Python", path)
     new_document.size += 10
-    old_manifest = generate_manifest(tmp_path, [old_document], split_document(old_document))
-    new_manifest = generate_manifest(tmp_path, [new_document], split_document(new_document))
+    old_manifest = generate_manifest(
+        tmp_path, [old_document], split_document(old_document)
+    )
+    new_manifest = generate_manifest(
+        tmp_path, [new_document], split_document(new_document)
+    )
 
     changes = compare_manifests(old_manifest, new_manifest)
 

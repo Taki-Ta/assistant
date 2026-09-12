@@ -1,14 +1,23 @@
 import hashlib
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from openai import AsyncOpenAI
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from interview_ai.api.auth import verify_bearer
+from interview_ai.config import config
 from interview_ai.db.database import get_db
-from interview_ai.db.models import Document
+from interview_ai.db.models import Document, DocumentStatus
+from interview_ai.db.repositories import PostgresChunkStore
+from interview_ai.indexing.embedding import OpenAIEmbeddingProvider
+from interview_ai.indexing.service import IndexService
+from interview_ai.indexing.vector_store import PostgresVectorStore
+from interview_ai.ingestion.scanner import split_document
 
 MAX_MARKDOWN_SIZE = 5 * 1024 * 1024
 
@@ -28,6 +37,23 @@ def _owner_id(claims: dict[str, object]) -> str:
     return owner_id
 
 
+def get_index_service(db: DatabaseSession) -> IndexService:
+    client = AsyncOpenAI(api_key=config.api_key, base_url=config.host)
+    embedding_provider = OpenAIEmbeddingProvider(
+        client=client,
+        model=config.embedding_model_name,
+        dimensions=config.dimensions,
+    )
+    return IndexService(
+        embedding_provider=embedding_provider,
+        chunk_store=PostgresChunkStore(db),
+        vector_store=PostgresVectorStore(db),
+    )
+
+
+IndexServiceDependency = Annotated[IndexService, Depends(get_index_service)]
+
+
 @router.get("", response_model=list[Document], status_code=status.HTTP_200_OK)
 async def get_documents(claims: Claims, db: DatabaseSession) -> list[Document]:
     stmt = (
@@ -45,7 +71,6 @@ async def add_document(
     claims: Claims,
     db: DatabaseSession,
 ) -> Document:
-    print(f'{file=}')
     filename = Path(file.filename or "").name
     if not filename or Path(filename).suffix.lower() != ".md":
         raise HTTPException(
@@ -77,6 +102,45 @@ async def add_document(
         mime_type=file.content_type or "text/markdown",
     )
     db.add(document)
+    await db.commit()
+    await db.refresh(document)
+    return document
+
+
+@router.post("/{document_id}/index", response_model=Document)
+async def index_document(
+    document_id: str,
+    claims: Claims,
+    db: DatabaseSession,
+    index_service: IndexServiceDependency,
+) -> Document:
+    """切分一个当前用户的文档，并将 Chunk 和向量写入 PostgreSQL。"""
+    try:
+        parsed_document_id = UUID(document_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="id 应为 UUID",
+        ) from exc
+
+    statement = select(Document).where(
+        Document.owner_id == _owner_id(claims),
+        Document.id == parsed_document_id,
+    )
+    document = (await db.scalars(statement)).one_or_none()
+    if document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="未找到文档",
+        )
+
+    document.status = DocumentStatus.INDEXING
+    document.error_message = None
+    chunks = split_document(document)
+    document.chunk_count = await index_service.index(document, chunks)
+    document.status = DocumentStatus.INDEXED
+    document.indexed_at = datetime.now(UTC)
+
     await db.commit()
     await db.refresh(document)
     return document

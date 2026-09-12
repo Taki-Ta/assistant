@@ -1,10 +1,10 @@
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 
 class OpenAIEmbeddingProvider:
     def __init__(
         self,
-        client: OpenAI,
+        client: AsyncOpenAI,
         model: str,
         dimensions: int,
     ) -> None:
@@ -16,11 +16,11 @@ class OpenAIEmbeddingProvider:
     def model_name(self) -> str:
         return self._model
 
-    def embed(self, texts: list[str]) -> list[list[float]]:
+    async def embed(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
 
-        response = self._client.embeddings.create(
+        response = await self._client.embeddings.create(
             model=self._model,
             input=texts,
             dimensions=self._dimensions,
@@ -28,3 +28,6 @@ class OpenAIEmbeddingProvider:
         )
         ordered_items = sorted(response.data, key=lambda item: item.index)
         return [item.embedding for item in ordered_items]
+
+    async def embed_one(self, text: str) -> list[float]:
+        return (await self.embed([text]))[0]

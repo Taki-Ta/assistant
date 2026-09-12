@@ -1,4 +1,3 @@
-import asyncio
 from dataclasses import dataclass
 
 from interview_ai.core.protocols import IndexableDocument
@@ -23,11 +22,7 @@ class IndexService:
             raise ValueError("Chunk 找不到对应 Document")
 
         contents = [chunk.content for chunk in chunks]
-        vectors = (
-            await asyncio.to_thread(self.embedding_provider.embed, contents)
-            if contents
-            else []
-        )
+        vectors = await self.embedding_provider.embed(contents) if contents else []
         if len(vectors) != len(contents):
             raise ValueError(
                 "向量数量与 Chunk 数量不一致："

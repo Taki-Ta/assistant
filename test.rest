@@ -2,7 +2,7 @@
 @host = 127.0.0.1:8000
 @prefix=api/v1
 
-@token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTAwMSIsInJvbGUiOiJhZG1pbiIsImV4cCI6MTgxOTEwOTQ4OX0.u_TdzGANVCs5cFq05lqhVuwwIcJD7MXD7QPsvSimwsE
+@token=replace-with-token
 
 GET http://{{host}}/{{prefix}}/documents
 Authorization: Bearer {{token}}
@@ -25,16 +25,21 @@ Content-Type: text/markdown
 
 ###
 GET http://{{host}}/{{prefix}}/test
-# Authorization: Bearer {{token}}
+Authorization: Bearer {{token}}
 
 
-###
-POST http://{{host}}/{{prefix}}/index?document_id=123
+### index
+POST http://{{host}}/{{prefix}}/documents/01a08f47-6c5e-71b6-91c1-5f63ba79288b/index
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 
-###
-POST http://{{host}}/{{prefix}}/index?document_id=01a08f47-6c5e-71b6-91c1-5f63ba79288b
+### 查询
+POST http://{{host}}/{{prefix}}/search
 Authorization: Bearer {{token}}
 Content-Type: application/json
+
+{
+    "query": "保存",
+    "limit": 5
+}

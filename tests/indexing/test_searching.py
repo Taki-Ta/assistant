@@ -1,6 +1,6 @@
 import pytest
 
-from interview_ai.indexing.searching import cosine_similarity
+from interview_ai.util import cosine_similarity
 
 
 def test_cosine_similarity_of_same_direction_vectors_is_one():

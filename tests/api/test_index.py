@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from interview_ai.api.app import create_app
 from interview_ai.api.auth import verify_bearer
-from interview_ai.api.routes.index import get_index_service
+from interview_ai.api.routes.document import get_index_service
 from interview_ai.db.database import get_db
 from interview_ai.db.models import Document, DocumentStatus
 
@@ -62,8 +62,7 @@ def test_index_document_persists_chunks_and_vectors() -> None:
     index_service.index.return_value = 1
 
     response = _client(session, index_service).post(
-        "/api/v1/index",
-        params={"document_id": str(document.id)},
+        f"/api/v1/documents/{document.id!s}/index"
     )
 
     assert response.status_code == 200
@@ -79,8 +78,7 @@ def test_index_document_persists_chunks_and_vectors() -> None:
 def test_index_document_rejects_invalid_uuid() -> None:
     session = _DatabaseSession(None)
     response = _client(session, AsyncMock()).post(
-        "/api/v1/index",
-        params={"document_id": "not-a-uuid"},
+        "/api/v1/documents/not-a-uuid/index",
     )
 
     assert response.status_code == 400
@@ -89,8 +87,7 @@ def test_index_document_rejects_invalid_uuid() -> None:
 def test_index_document_returns_not_found() -> None:
     session = _DatabaseSession(None)
     response = _client(session, AsyncMock()).post(
-        "/api/v1/index",
-        params={"document_id": "550e8400-e29b-41d4-a716-446655440001"},
+        "/api/v1/documents/550e8400-e29b-41d4-a716-446655440001/index",
     )
 
     assert response.status_code == 404

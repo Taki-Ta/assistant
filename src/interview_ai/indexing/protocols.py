@@ -10,7 +10,9 @@ class EmbeddingProvider(Protocol):
     @property
     def model_name(self) -> str: ...
 
-    def embed(self, texts: list[str]) -> list[list[float]]: ...
+    async def embed(self, texts: list[str]) -> list[list[float]]: ...
+
+    async def embed_one(self, text: str) -> list[float]: ...
 
 
 class ChunkStore(Protocol):
@@ -25,5 +27,7 @@ class VectorStore(Protocol):
     async def search(
         self,
         query_vector: list[float],
+        *,
+        owner_id: str,
         limit: int = 5,
     ) -> list[SearchResult]: ...

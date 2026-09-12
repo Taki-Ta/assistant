@@ -4,7 +4,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from interview_ai.db.models import VectorRecord
+from interview_ai.db.models import Chunk, Document, VectorRecord
 
 from ..models import SearchResult
 
@@ -48,6 +48,8 @@ class PostgresVectorStore:
     async def search(
         self,
         query_vector: list[float],
+        *,
+        owner_id: str,
         limit: int = 5,
     ) -> list[SearchResult]:
         if limit <= 0:
@@ -55,12 +57,18 @@ class PostgresVectorStore:
 
         distance = VectorRecord.vector.cosine_distance(query_vector)
         statement = (
-            select(VectorRecord.chunk_id, distance.label("distance"))
+            select(VectorRecord.chunk_id, Chunk.content, distance.label("distance"))
+            .select_from(VectorRecord)
+            .join(Chunk, VectorRecord.chunk_id == Chunk.id)
+            .join(Document, Chunk.document_id == Document.id)
+            .where(Document.owner_id == owner_id)
             .order_by(distance)
             .limit(limit)
         )
         rows = (await self._db.execute(statement)).all()
         return [
-            SearchResult(chunk_id=chunk_id, score=1.0 - float(distance_value))
-            for chunk_id, distance_value in rows
+            SearchResult(
+                chunk_id=chunk_id, content=content, score=1.0 - float(distance_value)
+            )
+            for chunk_id, content, distance_value in rows
         ]

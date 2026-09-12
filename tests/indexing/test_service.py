@@ -67,9 +67,7 @@ async def test_index_rejects_chunk_without_matching_document(tmp_path):
     document = make_file("# Orphan", tmp_path / "orphan.md")
     chunks = split_document(document)
     other_document = make_file("# Other", tmp_path / "other.md")
-    service, embedding_provider, chunk_store, vector_store = make_service(
-        [[1.0, 0.0]]
-    )
+    service, embedding_provider, chunk_store, vector_store = make_service([[1.0, 0.0]])
 
     with pytest.raises(ValueError, match="Chunk 找不到对应 Document"):
         await service.index(other_document, chunks)
@@ -93,4 +91,3 @@ async def test_index_rejects_embedding_count_mismatch(tmp_path):
     )
     chunk_store.replace.assert_not_awaited()
     vector_store.upsert.assert_not_awaited()
-
