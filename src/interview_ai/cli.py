@@ -1,9 +1,12 @@
+import asyncio
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
+from .evaluation.runner import run_retrieval_evaluation, save_retrieval_report
 from .ingestion.manifest import (
     compare_manifests,
     generate_manifest,
@@ -88,6 +91,47 @@ def plan(
     except (OSError, TypeError, ValueError, KeyError) as exc:
         typer.echo(f"生成变更计划失败：{exc}", err=True)
         raise typer.Exit(code=1) from exc
+
+
+@app.command("eval-retrieval")
+def eval_retrieval(
+    dataset_root: Annotated[
+        Path,
+        typer.Option("--dataset", help="包含 corpus 和 questions.jsonl 的目录"),
+    ] = Path("evals/retrieval"),
+    report_path: Annotated[
+        Path | None,
+        typer.Option("--report", help="评测报告输出路径"),
+    ] = None,
+    limit: Annotated[
+        int,
+        typer.Option("--limit", min=1, help="每个问题返回的最大结果数"),
+    ] = 5,
+) -> None:
+    """使用真实 Embedding 和 pgvector 运行检索评测。"""
+    try:
+        report = asyncio.run(
+            run_retrieval_evaluation(dataset_root.resolve(), limit=limit)
+        )
+        output_path = report_path or (
+            dataset_root
+            / "reports"
+            / f"retrieval-{datetime.now(UTC).strftime('%Y-%m-%d__%H-%M-%S')}.json"
+        )
+        save_retrieval_report(report, output_path)
+    except (OSError, UnicodeError, ValueError) as exc:
+        typer.echo(f"检索评测失败：{exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    metrics = report.metrics
+    typer.echo(f"问题数：{report.question_count}")
+    typer.echo(f"Hit@1：{metrics.hit_at_1:.2%}")
+    typer.echo(f"Hit@{report.limit}：{metrics.hit_at_k:.2%}")
+    typer.echo(f"MRR@{report.limit}：{metrics.mrr_at_k:.4f}")
+    typer.echo(f"Recall@{report.limit}：{metrics.recall_at_k:.2%}")
+    typer.echo(f"平均延迟：{metrics.average_latency_ms:.2f} ms")
+    typer.echo(f"P95 延迟：{metrics.p95_latency_ms:.2f} ms")
+    typer.echo(f"报告：{output_path.resolve()}")
 
 
 def _print_plan_json(path, documents, chunks, changes: ChangeSet) -> None:

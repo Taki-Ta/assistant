@@ -57,7 +57,16 @@ class PostgresVectorStore:
 
         distance = VectorRecord.vector.cosine_distance(query_vector)
         statement = (
-            select(VectorRecord.chunk_id, Chunk.content, distance.label("distance"))
+            select(
+                VectorRecord.chunk_id,
+                Chunk.document_id,
+                Document.name,
+                Chunk.headings,
+                Chunk.content,
+                Chunk.start_line,
+                Chunk.end_line,
+                distance.label("distance"),
+            )
             .select_from(VectorRecord)
             .join(Chunk, VectorRecord.chunk_id == Chunk.id)
             .join(Document, Chunk.document_id == Document.id)
@@ -68,7 +77,23 @@ class PostgresVectorStore:
         rows = (await self._db.execute(statement)).all()
         return [
             SearchResult(
-                chunk_id=chunk_id, content=content, score=1.0 - float(distance_value)
+                chunk_id=chunk_id,
+                document_id=document_id,
+                document_name=document_name,
+                headings=tuple(headings),
+                content=content,
+                start_line=start_line,
+                end_line=end_line,
+                score=1.0 - float(distance_value),
             )
-            for chunk_id, content, distance_value in rows
+            for (
+                chunk_id,
+                document_id,
+                document_name,
+                headings,
+                content,
+                start_line,
+                end_line,
+                distance_value,
+            ) in rows
         ]

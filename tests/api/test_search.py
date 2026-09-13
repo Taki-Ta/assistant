@@ -44,6 +44,11 @@ def test_search_returns_current_users_similar_chunks() -> None:
             "chunk_id": "550e8400-e29b-41d4-a716-446655440001",
             "content": "# Python",
             "score": 0.91,
+            "document_id": None,
+            "document_name": None,
+            "headings": [],
+            "start_line": None,
+            "end_line": None,
         }
     ]
     service.search.assert_awaited_once_with("Python 是什么？", "user-001", 3)

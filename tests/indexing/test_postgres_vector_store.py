@@ -36,8 +36,20 @@ async def test_postgres_vector_store_upserts_by_chunk_id() -> None:
 @pytest.mark.asyncio
 async def test_postgres_vector_store_search_converts_distance_to_similarity() -> None:
     chunk_id = UUID("550e8400-e29b-41d4-a716-446655440001")
+    document_id = UUID("550e8400-e29b-41d4-a716-446655440002")
     result = Mock()
-    result.all.return_value = [(chunk_id, "# Python", 0.25)]
+    result.all.return_value = [
+        (
+            chunk_id,
+            document_id,
+            "python.md",
+            ["Python", "基础"],
+            "# Python",
+            1,
+            3,
+            0.25,
+        )
+    ]
     session = _session(execute_result=result)
 
     matches = await PostgresVectorStore(session).search(
@@ -47,7 +59,12 @@ async def test_postgres_vector_store_search_converts_distance_to_similarity() ->
     )
 
     assert matches[0].chunk_id == chunk_id
+    assert matches[0].document_id == document_id
+    assert matches[0].document_name == "python.md"
+    assert matches[0].headings == ("Python", "基础")
     assert matches[0].content == "# Python"
+    assert matches[0].start_line == 1
+    assert matches[0].end_line == 3
     assert matches[0].score == pytest.approx(0.75)
 
     statement = session.execute.await_args.args[0]
