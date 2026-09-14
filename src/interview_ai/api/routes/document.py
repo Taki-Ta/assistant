@@ -4,26 +4,17 @@ from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from openai import AsyncOpenAI
+from fastapi import APIRouter, File, HTTPException, UploadFile, status
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from interview_ai.api.auth import verify_bearer
-from interview_ai.config import config
-from interview_ai.db.database import get_db
 from interview_ai.db.models import Document, DocumentStatus
-from interview_ai.db.repositories import PostgresChunkStore
-from interview_ai.indexing.embedding import OpenAIEmbeddingProvider
-from interview_ai.indexing.service import IndexService
-from interview_ai.indexing.vector_store import PostgresVectorStore
 from interview_ai.ingestion.scanner import split_document
+
+from ..dependencies import Claims, DatabaseSession, IndexServiceDependency
 
 MAX_MARKDOWN_SIZE = 5 * 1024 * 1024
 
 router = APIRouter(prefix="/api/v1/documents", tags=["document"])
-Claims = Annotated[dict[str, object], Depends(verify_bearer)]
-DatabaseSession = Annotated[AsyncSession, Depends(get_db)]
 
 
 def _owner_id(claims: dict[str, object]) -> str:
@@ -35,23 +26,6 @@ def _owner_id(claims: dict[str, object]) -> str:
             headers={"WWW-Authenticate": "Bearer"},
         )
     return owner_id
-
-
-def get_index_service(db: DatabaseSession) -> IndexService:
-    client = AsyncOpenAI(api_key=config.api_key, base_url=config.host)
-    embedding_provider = OpenAIEmbeddingProvider(
-        client=client,
-        model=config.embedding_model_name,
-        dimensions=config.dimensions,
-    )
-    return IndexService(
-        embedding_provider=embedding_provider,
-        chunk_store=PostgresChunkStore(db),
-        vector_store=PostgresVectorStore(db),
-    )
-
-
-IndexServiceDependency = Annotated[IndexService, Depends(get_index_service)]
 
 
 @router.get("", response_model=list[Document], status_code=status.HTTP_200_OK)

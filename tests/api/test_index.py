@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from interview_ai.api.app import create_app
 from interview_ai.api.auth import verify_bearer
-from interview_ai.api.routes.document import get_index_service
+from interview_ai.api.dependencies import get_index_service
 from interview_ai.db.database import get_db
 from interview_ai.db.models import Document, DocumentStatus
 

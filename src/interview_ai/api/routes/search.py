@@ -1,21 +1,11 @@
-from typing import Annotated
-
-from fastapi import APIRouter, Depends, HTTPException, status
-from openai import AsyncOpenAI
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from interview_ai.api.auth import verify_bearer
-from interview_ai.config import config
-from interview_ai.db.database import get_db
-from interview_ai.indexing.embedding import OpenAIEmbeddingProvider
 from interview_ai.indexing.models import SearchResult
-from interview_ai.indexing.search_service import SearchService
-from interview_ai.indexing.vector_store import PostgresVectorStore
+
+from ..dependencies import Claims, SearchServiceDependency
 
 router = APIRouter(prefix="/api/v1/search", tags=["search"])
-Claims = Annotated[dict[str, object], Depends(verify_bearer)]
-DatabaseSession = Annotated[AsyncSession, Depends(get_db)]
 
 
 class SearchRequest(BaseModel):
@@ -32,22 +22,6 @@ def _owner_id(claims: dict[str, object]) -> str:
             headers={"WWW-Authenticate": "Bearer"},
         )
     return owner_id
-
-
-def get_search_service(db: DatabaseSession) -> SearchService:
-    client = AsyncOpenAI(api_key=config.api_key, base_url=config.host)
-    embedding_provider = OpenAIEmbeddingProvider(
-        client=client,
-        model=config.embedding_model_name,
-        dimensions=config.dimensions,
-    )
-    return SearchService(
-        embedding_provider=embedding_provider,
-        vector_store=PostgresVectorStore(db),
-    )
-
-
-SearchServiceDependency = Annotated[SearchService, Depends(get_search_service)]
 
 
 @router.post("", response_model=list[SearchResult])
