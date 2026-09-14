@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     jwt_secret: str = Field(alias="JWT_SECRET")
     jwt_exp: float = Field(default=300, alias="JWT_EXP_SECONDS")
     database_url: str = Field(alias="DATABASE_URL")
+    chat_model: str = Field(alias="CHAT_MODEL")
+    chat_api_host: str = Field(alias="CHAT_API_HOST")
+    chat_api_key: str = Field(alias="CHAT_API_KEY")
+    max_tool_calls: int = Field(default=8, ge=1, alias="MAX_TOOL_CALLS")
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

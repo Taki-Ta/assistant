@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from openai import AsyncOpenAI
 
+from interview_ai.api.routes.ai import router as ai_router
 from interview_ai.api.routes.document import router as document_router
 from interview_ai.api.routes.health import router as health_router
 from interview_ai.api.routes.search import router as search_router
@@ -35,6 +36,7 @@ def create_app() -> FastAPI:
     app.include_router(document_router)
     app.include_router(search_router)
     app.include_router(test_router)
+    app.include_router(ai_router)
     return app
 
 
