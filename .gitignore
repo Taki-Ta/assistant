@@ -10,3 +10,4 @@ wheels/
 .venv
 /manifest
 .env
+/evals/*/reports/

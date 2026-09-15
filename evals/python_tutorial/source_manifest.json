@@ -1,0 +1,328 @@
+{
+  "schema_version": 1,
+  "upstream_repository": "https://github.com/walter201230/Python",
+  "upstream_revision": "abfd0ab613b2f3a4b5003a69acda53ea67b69b03",
+  "license": "CC BY 4.0",
+  "transformations": [
+    "按上游 README 的章节和子节顺序合并 Markdown",
+    "为每章和每个上游子节增加统一标题",
+    "仅在代码围栏外调整 Markdown 标题层级",
+    "移除未随评测集分发的独立图片引用",
+    "将制表符统一展开为四个空格",
+    "统一为 UTF-8 和 LF 换行"
+  ],
+  "documents": [
+    {
+      "chapter": 0,
+      "title": "为什么学 Python",
+      "document": "00-为什么学-python.md",
+      "source_paths": [
+        "Article/PythonBasis/python0/WhyStudyPython.md"
+      ],
+      "sha256": "12bb50611bb094b7c4d81850a51a5b468958fd0662125c7a5fbb0dd1446ef0a0"
+    },
+    {
+      "chapter": 1,
+      "title": "Python 安装与第一个程序",
+      "document": "01-安装与第一个程序.md",
+      "source_paths": [
+        "Article/PythonBasis/python1/Introduction.md",
+        "Article/PythonBasis/python1/Installation.md",
+        "Article/PythonBasis/python1/The_first_procedure.md",
+        "Article/PythonBasis/python1/IDE.md"
+      ],
+      "sha256": "d05f538194e62cbb37cc23776ffa1ed6778896a01cbd3b6f590435d46f7da873"
+    },
+    {
+      "chapter": 2,
+      "title": "基本数据类型与变量",
+      "document": "02-基本数据类型与变量.md",
+      "source_paths": [
+        "Article/PythonBasis/python2/Grammar.md",
+        "Article/PythonBasis/python2/print.md",
+        "Article/PythonBasis/python2/Type_of_data.md",
+        "Article/PythonBasis/python2/StringCoding.md",
+        "Article/PythonBasis/python2/Type_conversion.md",
+        "Article/PythonBasis/python2/Variable.md"
+      ],
+      "sha256": "991bc5226c81d5bb9ebad804c25be7e1a00b75ff65d4abf38c05277f2b2584ae"
+    },
+    {
+      "chapter": 3,
+      "title": "List 与 Tuple",
+      "document": "03-list-与-tuple.md",
+      "source_paths": [
+        "Article/PythonBasis/python3/List.md",
+        "Article/PythonBasis/python3/tuple.md"
+      ],
+      "sha256": "1483219b564381001882eabfdab3508548e2b0f7c74ed2b56f24bc65f494a511"
+    },
+    {
+      "chapter": 4,
+      "title": "Dict 与 Set",
+      "document": "04-dict-与-set.md",
+      "source_paths": [
+        "Article/PythonBasis/python4/Dict.md",
+        "Article/PythonBasis/python4/Set.md"
+      ],
+      "sha256": "9d9101f63252adaccb20d056c1d383725163a7101e31c9f9c47b5fd3be3e372c"
+    },
+    {
+      "chapter": 5,
+      "title": "条件语句与循环语句",
+      "document": "05-条件与循环.md",
+      "source_paths": [
+        "Article/PythonBasis/python5/If.md",
+        "Article/PythonBasis/python5/Cycle.md",
+        "Article/PythonBasis/python5/Example.md"
+      ],
+      "sha256": "0618d692ff7c4bf0affad8acb3994a5a5488cf2e42f28679fe11ee00addaf53f"
+    },
+    {
+      "chapter": 6,
+      "title": "函数",
+      "document": "06-函数.md",
+      "source_paths": [
+        "Article/PythonBasis/python6/1.md",
+        "Article/PythonBasis/python6/2.md",
+        "Article/PythonBasis/python6/3.md",
+        "Article/PythonBasis/python6/4.md",
+        "Article/PythonBasis/python6/5.md"
+      ],
+      "sha256": "f72736bc199748f6ea21e596d95e4698d7b0daa6b6373e77934e95aa88e3b8cf"
+    },
+    {
+      "chapter": 7,
+      "title": "迭代器与生成器",
+      "document": "07-迭代器与生成器.md",
+      "source_paths": [
+        "Article/PythonBasis/python7/1.md",
+        "Article/PythonBasis/python7/2.md",
+        "Article/PythonBasis/python7/3.md",
+        "Article/PythonBasis/python7/4.md",
+        "Article/PythonBasis/python7/5.md"
+      ],
+      "sha256": "958fc3ca13807766ce0239d2c72e3016a9c2dd9f3ed520aa7ae5162a7d5d90e8"
+    },
+    {
+      "chapter": 8,
+      "title": "面向对象",
+      "document": "08-面向对象.md",
+      "source_paths": [
+        "Article/PythonBasis/python8/1.md",
+        "Article/PythonBasis/python8/2.md",
+        "Article/PythonBasis/python8/3.md",
+        "Article/PythonBasis/python8/4.md",
+        "Article/PythonBasis/python8/5.md",
+        "Article/PythonBasis/python8/6.md",
+        "Article/PythonBasis/python8/7.md",
+        "Article/PythonBasis/python8/8.md",
+        "Article/PythonBasis/python8/9.md"
+      ],
+      "sha256": "d60cc4f67eac08593392bd61334e536ea8ed261046cca8f071adeff66e2fdd9f"
+    },
+    {
+      "chapter": 9,
+      "title": "模块与包",
+      "document": "09-模块与包.md",
+      "source_paths": [
+        "Article/PythonBasis/python9/1.md",
+        "Article/PythonBasis/python9/2.md",
+        "Article/PythonBasis/python9/3.md",
+        "Article/PythonBasis/python9/4.md",
+        "Article/PythonBasis/python9/5.md"
+      ],
+      "sha256": "dafab0b7705cd55099f3132f38786711ca12fadc6b874e1ed27decdf3e98b043"
+    },
+    {
+      "chapter": 10,
+      "title": "Python 的 Magic Method",
+      "document": "10-魔法方法.md",
+      "source_paths": [
+        "Article/PythonBasis/python10/1.md",
+        "Article/PythonBasis/python10/2.md",
+        "Article/PythonBasis/python10/3.md",
+        "Article/PythonBasis/python10/4.md",
+        "Article/PythonBasis/python10/5.md",
+        "Article/PythonBasis/python10/6.md"
+      ],
+      "sha256": "cc33f02399e18ed5f1bdf6564fef648f58c069ac62c2d1ac84c709a58b2f2ff4"
+    },
+    {
+      "chapter": 11,
+      "title": "枚举类",
+      "document": "11-枚举类.md",
+      "source_paths": [
+        "Article/PythonBasis/python11/1.md",
+        "Article/PythonBasis/python11/2.md",
+        "Article/PythonBasis/python11/3.md",
+        "Article/PythonBasis/python11/4.md"
+      ],
+      "sha256": "3385d9aacc0d1df0472fff7bc314e601e63dcb75f8b82dc48c00f26425158559"
+    },
+    {
+      "chapter": 12,
+      "title": "元类",
+      "document": "12-元类.md",
+      "source_paths": [
+        "Article/PythonBasis/python12/1.md",
+        "Article/PythonBasis/python12/2.md",
+        "Article/PythonBasis/python12/3.md",
+        "Article/PythonBasis/python12/4.md",
+        "Article/PythonBasis/python12/5.md"
+      ],
+      "sha256": "3314143ca971c9d4573c557d36cef3ea1763ad9bc568cf9b1bbcdcdd4ee7f362"
+    },
+    {
+      "chapter": 13,
+      "title": "线程与进程",
+      "document": "13-线程与进程.md",
+      "source_paths": [
+        "Article/PythonBasis/python13/1.md",
+        "Article/PythonBasis/python13/2.md",
+        "Article/PythonBasis/python13/3.md"
+      ],
+      "sha256": "188a2b9274d513d38f758eefaf6105b531779608886ea23424613dae6f6e1b2e"
+    },
+    {
+      "chapter": 14,
+      "title": "正则表达式",
+      "document": "14-正则表达式.md",
+      "source_paths": [
+        "Article/PythonBasis/python14/1.md",
+        "Article/PythonBasis/python14/2.md",
+        "Article/PythonBasis/python14/3.md",
+        "Article/PythonBasis/python14/4.md",
+        "Article/PythonBasis/python14/5.md",
+        "Article/PythonBasis/python14/6.md"
+      ],
+      "sha256": "bcc954b11961fb93c3ec17f4fecc6e12f271e7bdaee15d59eaf0cd64f60a5214"
+    },
+    {
+      "chapter": 15,
+      "title": "闭包",
+      "document": "15-闭包.md",
+      "source_paths": [
+        "Article/PythonBasis/python15/1.md"
+      ],
+      "sha256": "99dc66d6968c74842c16d41e66d919f1a0dce94d476e89cd6a25a669c747b518"
+    },
+    {
+      "chapter": 16,
+      "title": "装饰器",
+      "document": "16-装饰器.md",
+      "source_paths": [
+        "Article/PythonBasis/python16/1.md"
+      ],
+      "sha256": "ec145e6f05651d834a636530d337cf0abd6d003cb53dc12cc4d14e13353874b3"
+    },
+    {
+      "chapter": 17,
+      "title": "类型注解",
+      "document": "17-类型注解.md",
+      "source_paths": [
+        "Article/PythonBasis/python17/1.md"
+      ],
+      "sha256": "7743e272c10cf128ae7180a76287179e48bf52bcf809059145ff43bfe92d6ffc"
+    },
+    {
+      "chapter": 18,
+      "title": "pathlib 路径处理",
+      "document": "18-pathlib-路径处理.md",
+      "source_paths": [
+        "Article/PythonBasis/python18/1.md"
+      ],
+      "sha256": "99030874cee64e59fdf37cadb64061c9c942e0cde31334c0272ae0a56935bfa7"
+    },
+    {
+      "chapter": 19,
+      "title": "异常处理与异常组",
+      "document": "19-异常处理与异常组.md",
+      "source_paths": [
+        "Article/PythonBasis/python19/1.md"
+      ],
+      "sha256": "1d7a008f9c73e30c6cc38fcdae6182db3989ca4cb60429077f4e8de8340ebf47"
+    },
+    {
+      "chapter": 20,
+      "title": "dataclass 与 Pydantic",
+      "document": "20-dataclass-与-pydantic.md",
+      "source_paths": [
+        "Article/PythonBasis/python20/1.md"
+      ],
+      "sha256": "3f3beab2928a1f10c5d349af3ecda02f4148ea0a8fdbeedd273e420345cadde5"
+    },
+    {
+      "chapter": 21,
+      "title": "上下文管理器",
+      "document": "21-上下文管理器.md",
+      "source_paths": [
+        "Article/PythonBasis/python21/1.md"
+      ],
+      "sha256": "f2acd9ac01c5209baa082ade756dfd5009e84f466f45073feab8c0373a4334fa"
+    },
+    {
+      "chapter": 22,
+      "title": "async/await 与并发",
+      "document": "22-async-await-与并发.md",
+      "source_paths": [
+        "Article/PythonBasis/python22/1.md"
+      ],
+      "sha256": "06cd082637672e7de8b8b1720d90d9e7f8350a992480637fe0340296216265e2"
+    },
+    {
+      "chapter": 23,
+      "title": "工程基线 pyproject 与 uv",
+      "document": "23-pyproject-与-uv.md",
+      "source_paths": [
+        "Article/PythonBasis/python23/1.md"
+      ],
+      "sha256": "926a6e7b9355febec9cf510309758cc9bce89bfa76beec7369e1336a5f7cdb24"
+    },
+    {
+      "chapter": 24,
+      "title": "代码风格 ruff",
+      "document": "24-ruff.md",
+      "source_paths": [
+        "Article/PythonBasis/python24/1.md"
+      ],
+      "sha256": "aeaaf44530db30946e85adc345b6c252aafcfebcdb5f3453f1adc0d99e05f27d"
+    },
+    {
+      "chapter": 25,
+      "title": "单元测试 pytest",
+      "document": "25-pytest.md",
+      "source_paths": [
+        "Article/PythonBasis/python25/1.md"
+      ],
+      "sha256": "7907f7ec709c6033eefc001df3ad8853d1f3092e932f1bafaa0b2e8837f32a81"
+    },
+    {
+      "chapter": 26,
+      "title": "标准日志 logging",
+      "document": "26-logging.md",
+      "source_paths": [
+        "Article/PythonBasis/python26/1.md"
+      ],
+      "sha256": "8a05bbc3c24ef2577657b957d7030aa536b4bc4e0fc55ac252ee46725f59955a"
+    },
+    {
+      "chapter": 27,
+      "title": "打包发布与 typer",
+      "document": "27-打包发布与-typer.md",
+      "source_paths": [
+        "Article/PythonBasis/python27/1.md"
+      ],
+      "sha256": "3013c8205a565f2310e6faac2089078d629b05b892eeba3fb5df4ba9d6505e5a"
+    },
+    {
+      "chapter": 28,
+      "title": "学完之后做什么",
+      "document": "28-学完之后.md",
+      "source_paths": [
+        "Article/PythonBasis/python28/1.md"
+      ],
+      "sha256": "bb188686010935960e9f461afdfef5f792f55c6dca648c0ea4a551122639b971"
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{"id":"python-00-001","query":"Python 为什么适合作为初学者的第一门编程语言？","relevant_sources":[{"document":"00-为什么学-python.md","heading":"Python 容易入门且功能强大","contains":"非常适合初学者"}],"tags":["chapter-00","paraphrase"]}
+{"id":"python-00-002","query":"教程认为硬件性能提升对 Python 流行有什么影响？","relevant_sources":[{"document":"00-为什么学-python.md","heading":"Python 越来越火爆","contains":"物理硬件功能不断提高"}],"tags":["chapter-00","reasoning"]}
+{"id":"python-01-001","query":"Windows 安装 Python 时，为了能在命令行直接运行，需要勾选哪个选项？","relevant_sources":[{"document":"01-安装与第一个程序.md","heading":"1、windows 系统下安装配置","contains":"Add Python 3.6 to PATH"}],"tags":["chapter-01","scenario"]}
+{"id":"python-01-002","query":"Python 2.x 和 3.x 两个版本系列是否兼容？","relevant_sources":[{"document":"01-安装与第一个程序.md","heading":"二、Python 的安装","contains":"两个版本是不兼容的"}],"tags":["chapter-01","direct"]}
+{"id":"python-02-001","query":"想在 f-string 中把浮点数保留两位小数，格式说明符应该怎么写？","relevant_sources":[{"document":"02-基本数据类型与变量.md","heading":"（2）格式说明：对齐、保留小数、千分位","contains":"{pi:.2f}"}],"tags":["chapter-02","code"]}
+{"id":"python-02-002","query":"执行 b = a 后又给 a 重新赋值，为什么 b 仍保留原来的字符串？","relevant_sources":[{"document":"02-基本数据类型与变量.md","heading":"2、变量的指向问题","contains":"Hello Python"}],"tags":["chapter-02","reasoning"]}
+{"id":"python-03-001","query":"需要一个创建后不能修改的有序序列，应使用 list 还是 tuple？","relevant_sources":[{"document":"03-list-与-tuple.md","heading":"1、什么是元组 （tuple）","contains":"一旦初始化就不能修改"}],"tags":["chapter-03","contrast"]}
+{"id":"python-03-002","query":"Python 列表通过什么方式访问指定位置的元素？","relevant_sources":[{"document":"03-list-与-tuple.md","heading":"3、如何访问 List（列表）中的值","contains":"列表的下标"}],"tags":["chapter-03","direct"]}
+{"id":"python-04-001","query":"为什么字典的键不能使用 list？","relevant_sources":[{"document":"04-dict-与-set.md","heading":"6、 dict （字典）使用时注意的事项","contains":"键必须不可变"}],"tags":["chapter-04","reasoning"]}
+{"id":"python-04-002","query":"需要一个可哈希、不可变的集合时应该用什么类型？","relevant_sources":[{"document":"04-dict-与-set.md","heading":"（2）frozenset：不可变的 set","contains":"frozenset"}],"tags":["chapter-04","scenario"]}
+{"id":"python-05-001","query":"Python 3.10 以后，复杂的多分支值匹配可以使用什么语法？","relevant_sources":[{"document":"05-条件与循环.md","heading":"6、 Python 3.10+ 的新写法：match / case","contains":"match"}],"tags":["chapter-05","direct"]}
+{"id":"python-05-002","query":"循环次数确定和不确定时，教程分别建议优先考虑哪两种循环？","relevant_sources":[{"document":"05-条件与循环.md","heading":"5、for 循环和 whlie 循环的区别","contains":"for 循环"}],"tags":["chapter-05","contrast"]}
+{"id":"python-06-001","query":"为什么不建议把可变 list 直接写成函数默认参数？","relevant_sources":[{"document":"06-函数.md","heading":"2、默认参数","contains":"None 作为默认值"}],"tags":["chapter-06","reasoning"]}
+{"id":"python-06-002","query":"如何声明调用时必须写出参数名的关键字参数？","relevant_sources":[{"document":"06-函数.md","heading":"5、只接受关键字参数","contains":"强制使用关键字参数"}],"tags":["chapter-06","code"]}
+{"id":"python-07-001","query":"数据量很大、不想一次把所有元素放进内存时，为什么生成器更合适？","relevant_sources":[{"document":"07-迭代器与生成器.md","heading":"1、为什么需要生成器","contains":"受到内存限制"}],"tags":["chapter-07","scenario"]}
+{"id":"python-07-002","query":"怎样把一个普通函数写成生成器函数？","relevant_sources":[{"document":"07-迭代器与生成器.md","heading":"4、以函数的形式实现生成器","contains":"yield"}],"tags":["chapter-07","code"]}
+{"id":"python-08-001","query":"实例属性与类属性有什么区别？","relevant_sources":[{"document":"08-面向对象.md","heading":"3、实例属性和类属性","contains":"类属性"}],"tags":["chapter-08","contrast"]}
+{"id":"python-08-002","query":"子类需要复用父类实现时，可以怎样调用父类的方法？","relevant_sources":[{"document":"08-面向对象.md","heading":"2、调用父类的方法","contains":"父类"}],"tags":["chapter-08","scenario"]}
+{"id":"python-09-001","query":"模块被直接运行和被 import 时，__name__ 的值有什么不同？","relevant_sources":[{"document":"09-模块与包.md","heading":"2、__name__ 属性","contains":"__main__"}],"tags":["chapter-09","contrast"]}
+{"id":"python-09-002","query":"为什么一般不推荐 from module import *？","relevant_sources":[{"document":"09-模块与包.md","heading":"3、from ··· import *","contains":"import *"}],"tags":["chapter-09","reasoning"]}
+{"id":"python-10-001","query":"创建对象时 __new__ 和 __init__ 各自负责什么？","relevant_sources":[{"document":"10-魔法方法.md","heading":"二、构造(`__new__`)和初始化(`__init__`)","contains":"__new__"}],"tags":["chapter-10","contrast"]}
+{"id":"python-10-002","query":"自定义对象要支持 len()，需要实现哪个容器相关魔术方法？","relevant_sources":[{"document":"10-魔法方法.md","heading":"五、自定义容器（Container）","contains":"__len__"}],"tags":["chapter-10","code"]}
+{"id":"python-11-001","query":"如何让 Python 在枚举存在重复值时帮助检查？","relevant_sources":[{"document":"11-枚举类.md","heading":"三、自定义类型的枚举","contains":"@unique"}],"tags":["chapter-11","code"]}
+{"id":"python-11-002","query":"枚举成员之间可以使用哪些方式比较？","relevant_sources":[{"document":"11-枚举类.md","heading":"四、枚举的比较","contains":"比较"}],"tags":["chapter-11","direct"]}
+{"id":"python-12-001","query":"如何用 type() 在运行时动态创建一个类？","relevant_sources":[{"document":"12-元类.md","heading":"二、使用 `type()` 动态创建类","contains":"type()"}],"tags":["chapter-12","code"]}
+{"id":"python-12-002","query":"元类与普通类之间是什么关系？","relevant_sources":[{"document":"12-元类.md","heading":"三、什么是元类","contains":"元类"}],"tags":["chapter-12","concept"]}
+{"id":"python-13-001","query":"主线程怎样等待子线程执行完成后再继续？","relevant_sources":[{"document":"13-线程与进程.md","heading":"2、线程合并（join方法）","contains":"join"}],"tags":["chapter-13","scenario"]}
+{"id":"python-13-002","query":"多个线程修改共享数据时，可以用什么机制避免竞争？","relevant_sources":[{"document":"13-线程与进程.md","heading":"3、线程同步与互斥锁","contains":"互斥锁"}],"tags":["chapter-13","scenario"]}
+{"id":"python-14-001","query":"re.match 和 re.search 在开始匹配的位置上有什么区别？","relevant_sources":[{"document":"14-正则表达式.md","heading":"re.match  和 re.search","contains":"re.match"}],"tags":["chapter-14","contrast"]}
+{"id":"python-14-002","query":"怎样用正则表达式把匹配到的文本替换掉？","relevant_sources":[{"document":"14-正则表达式.md","heading":"re.sub","contains":"re.sub"}],"tags":["chapter-14","code"]}
+{"id":"python-15-001","query":"闭包中如何修改外层函数的变量而不是全局变量？","relevant_sources":[{"document":"15-闭包.md","heading":"闭包","contains":"nonlocal"}],"tags":["chapter-15","code"]}
+{"id":"python-15-002","query":"用全局变量累计状态会带来哪些维护问题，闭包如何改善？","relevant_sources":[{"document":"15-闭包.md","heading":"闭包","contains":"全局变量降低了函数或模块之间的通用性"}],"tags":["chapter-15","reasoning"]}
+{"id":"python-16-001","query":"不修改原函数代码，怎样给多个函数统一增加打卡日期？","relevant_sources":[{"document":"16-装饰器.md","heading":"装饰器","contains":"add_time"}],"tags":["chapter-16","scenario"]}
+{"id":"python-16-002","query":"Python 装饰器利用了函数的哪两个特性？","relevant_sources":[{"document":"16-装饰器.md","heading":"装饰器","contains":"函数也是一个对象"}],"tags":["chapter-16","concept"]}
+{"id":"python-17-001","query":"函数可能返回字符串也可能返回 None，返回类型应该怎么标注？","relevant_sources":[{"document":"17-类型注解.md","heading":"函数可能返回 None 怎么办","contains":"None"}],"tags":["chapter-17","code"]}
+{"id":"python-17-002","query":"想表达鸭子类型的接口约束而不要求显式继承，可以使用什么类型工具？","relevant_sources":[{"document":"17-类型注解.md","heading":"Protocol——类型注解版的 duck typing","contains":"Protocol"}],"tags":["chapter-17","scenario"]}
+{"id":"python-18-001","query":"pathlib 中 glob 和 rglob 在目录搜索范围上有什么区别？","relevant_sources":[{"document":"18-pathlib-路径处理.md","heading":"5.3 `.rglob(pattern)`：递归匹配","contains":"递归"}],"tags":["chapter-18","contrast"]}
+{"id":"python-18-002","query":"希望得到规范化绝对路径并解析符号链接，应使用 Path 的哪个方法？","relevant_sources":[{"document":"18-pathlib-路径处理.md","heading":"8.2 `.resolve()`：转成绝对路径（并解析符号链接、`..` 等）","contains":"符号链接"}],"tags":["chapter-18","scenario"]}
+{"id":"python-19-001","query":"try 块没有发生异常时才执行的代码应该放在哪里？","relevant_sources":[{"document":"19-异常处理与异常组.md","heading":"else——没出错的时候才走","contains":"else"}],"tags":["chapter-19","direct"]}
+{"id":"python-19-002","query":"包装底层异常时，怎样保留原始异常作为异常链？","relevant_sources":[{"document":"19-异常处理与异常组.md","heading":"异常链——`raise ... from e`","contains":"raise"}],"tags":["chapter-19","scenario"]}
+{"id":"python-20-001","query":"dataclass 的 list 字段为什么要使用 default_factory？","relevant_sources":[{"document":"20-dataclass-与-pydantic.md","heading":"坑二：可变默认值必须用 `default_factory`","contains":"default_factory"}],"tags":["chapter-20","reasoning"]}
+{"id":"python-20-002","query":"需要对 API 输入做运行时类型校验时，应优先使用 dataclass 还是 Pydantic？","relevant_sources":[{"document":"20-dataclass-与-pydantic.md","heading":"Pydantic 入场——带运行时校验的数据模型","contains":"运行时校验"}],"tags":["chapter-20","contrast"]}
+{"id":"python-21-001","query":"一个类要原生支持 with 语句，需要实现哪两个方法？","relevant_sources":[{"document":"21-上下文管理器.md","heading":"with 的本质：上下文管理协议","contains":"__enter__"}],"tags":["chapter-21","code"]}
+{"id":"python-21-002","query":"运行时才知道要管理多少个上下文时，contextlib 提供了什么工具？","relevant_sources":[{"document":"21-上下文管理器.md","heading":"ExitStack：动态数量的上下文","contains":"ExitStack"}],"tags":["chapter-21","scenario"]}
+{"id":"python-22-001","query":"异步函数里为什么应使用 asyncio.sleep 而不是 time.sleep？","relevant_sources":[{"document":"22-async-await-与并发.md","heading":"asyncio.sleep vs time.sleep：阻塞坑","contains":"阻塞"}],"tags":["chapter-22","reasoning"]}
+{"id":"python-22-002","query":"Python 3.11 中想结构化地并发运行一组任务，可以使用什么？","relevant_sources":[{"document":"22-async-await-与并发.md","heading":"TaskGroup：3.11 之后的 gather 升级版","contains":"TaskGroup"}],"tags":["chapter-22","scenario"]}
+{"id":"python-23-001","query":"团队成员怎样根据锁文件精确同步项目依赖？","relevant_sources":[{"document":"23-pyproject-与-uv.md","heading":"uv sync 同步依赖","contains":"uv sync"}],"tags":["chapter-23","scenario"]}
+{"id":"python-23-002","query":"项目中的开发依赖应该用哪条 uv 命令添加？","relevant_sources":[{"document":"23-pyproject-与-uv.md","heading":"加开发依赖","contains":"--dev"}],"tags":["chapter-23","code"]}
+{"id":"python-24-001","query":"ruff 中哪个命令负责格式化代码？","relevant_sources":[{"document":"24-ruff.md","heading":"ruff format：black 替代品","contains":"ruff format"}],"tags":["chapter-24","direct"]}
+{"id":"python-24-002","query":"Ruff 报 I001 时表示代码存在什么问题？","relevant_sources":[{"document":"24-ruff.md","heading":"I001：import 排序","contains":"import"}],"tags":["chapter-24","scenario"]}
+{"id":"python-25-001","query":"pytest fixture 的 scope 决定了什么？","relevant_sources":[{"document":"25-pytest.md","heading":"fixture scope——什么时候建、什么时候销毁","contains":"scope"}],"tags":["chapter-25","concept"]}
+{"id":"python-25-002","query":"同一个测试需要用多组输入重复执行时应该使用什么 pytest 功能？","relevant_sources":[{"document":"25-pytest.md","heading":"参数化——同一个测试跑多组数据","contains":"parametrize"}],"tags":["chapter-25","scenario"]}
+{"id":"python-26-001","query":"为什么模块级 logger 通常使用 getLogger(__name__) 创建？","relevant_sources":[{"document":"26-logging.md","heading":"正经做法：getLogger(\\_\\_name\\_\\_)","contains":"__name__"}],"tags":["chapter-26","reasoning"]}
+{"id":"python-26-002","query":"在 except 中记录完整 traceback 应调用 logger.error 还是 logger.exception？","relevant_sources":[{"document":"26-logging.md","heading":"logger.exception()：在 except 里自动带 traceback","contains":"traceback"}],"tags":["chapter-26","contrast"]}
+{"id":"python-27-001","query":"正式发布前，怎样先把 Python 包上传到测试仓库演练？","relevant_sources":[{"document":"27-打包发布与-typer.md","heading":"上传到 TestPyPI 演练","contains":"uv publish"}],"tags":["chapter-27","scenario"]}
+{"id":"python-27-002","query":"怎样在 pyproject.toml 中把 Typer 应用注册为安装后的系统命令？","relevant_sources":[{"document":"27-打包发布与-typer.md","heading":"打包成系统命令：[project.scripts]","contains":"[project.scripts]"}],"tags":["chapter-27","code"]}
+{"id":"python-28-001","query":"想做 API 和业务系统，应选择教程建议的哪条后续学习方向？","relevant_sources":[{"document":"28-学完之后.md","heading":"方向二：Web 后端开发","contains":"Web 后端"}],"tags":["chapter-28","scenario"]}
+{"id":"python-28-002","query":"数据、Web 和自动化三个方向都需要继续培养哪些横向技能？","relevant_sources":[{"document":"28-学完之后.md","heading":"横向技能：三个方向都要会的东西","contains":"通用底盘"}],"tags":["chapter-28","multi-topic"]}
