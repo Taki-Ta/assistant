@@ -10,7 +10,7 @@ router = APIRouter(prefix="/api/v1/search", tags=["search"])
 
 class SearchRequest(BaseModel):
     query: str = Field(min_length=1)
-    limit: int = Field(default=5, ge=1, le=50)
+    limit: int | None = Field(default=None, ge=1, le=50)
 
 
 def _owner_id(claims: dict[str, object]) -> str:

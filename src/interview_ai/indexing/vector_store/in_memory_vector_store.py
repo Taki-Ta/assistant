@@ -35,9 +35,12 @@ class InMemoryVectorStore:
         *,
         owner_id: str,
         limit: int = 3,
+        score_threshold: float | None = None,
     ) -> list[SearchResult]:
         if limit <= 0:
             raise ValueError("limit 必须大于 0")
+        if score_threshold is not None and not 0 <= score_threshold <= 1:
+            raise ValueError("score_threshold 必须在 0 到 1 之间")
         if not self.inner:
             return []
         results = [
@@ -49,6 +52,10 @@ class InMemoryVectorStore:
             for item in self.inner
             if self.chunk_owners.get(item.chunk_id) == owner_id
             and item.chunk_id in self.chunk_contents
+            and (
+                score_threshold is None
+                or cosine_similarity(query_vector, item.vector) >= score_threshold
+            )
         ]
         results.sort(key=lambda x: x.score, reverse=True)
         return results[:limit]

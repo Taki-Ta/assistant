@@ -40,6 +40,7 @@ async def run_retrieval_evaluation(
             client=client,
             model=config.embedding_model_name,
             dimensions=config.dimensions,
+            batch_size=config.embedding_batch_size,
         )
         async with session_factory() as db:
             vector_store = PostgresVectorStore(db)
@@ -51,6 +52,8 @@ async def run_retrieval_evaluation(
             search_service = SearchService(
                 embedding_provider=embedding_provider,
                 vector_store=vector_store,
+                default_limit=limit,
+                score_threshold=None,
             )
 
             await db.execute(

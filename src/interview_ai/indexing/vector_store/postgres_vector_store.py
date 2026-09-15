@@ -51,9 +51,12 @@ class PostgresVectorStore:
         *,
         owner_id: str,
         limit: int = 5,
+        score_threshold: float | None = None,
     ) -> list[SearchResult]:
         if limit <= 0:
             raise ValueError("limit 必须大于 0")
+        if score_threshold is not None and not 0 <= score_threshold <= 1:
+            raise ValueError("score_threshold 必须在 0 到 1 之间")
 
         distance = VectorRecord.vector.cosine_distance(query_vector)
         statement = (
@@ -74,6 +77,8 @@ class PostgresVectorStore:
             .order_by(distance)
             .limit(limit)
         )
+        if score_threshold is not None:
+            statement = statement.where(distance <= 1.0 - score_threshold)
         rows = (await self._db.execute(statement)).all()
         return [
             SearchResult(

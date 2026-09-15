@@ -74,6 +74,25 @@ async def test_postgres_vector_store_search_converts_distance_to_similarity() ->
 
 
 @pytest.mark.asyncio
+async def test_postgres_vector_store_applies_score_threshold() -> None:
+    result = Mock()
+    result.all.return_value = []
+    session = _session(execute_result=result)
+
+    await PostgresVectorStore(session).search(
+        [0.1, 0.2],
+        owner_id="user-001",
+        limit=5,
+        score_threshold=0.6,
+    )
+
+    statement = session.execute.await_args.args[0]
+    sql = str(statement.compile(dialect=postgresql.dialect()))
+    assert "vectors.vector <=>" in sql
+    assert "<=" in sql
+
+
+@pytest.mark.asyncio
 async def test_postgres_vector_store_skips_empty_writes() -> None:
     session = _session()
     store = PostgresVectorStore(session)

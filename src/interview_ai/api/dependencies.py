@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from interview_ai.agent.runtime import AgentContext, ToolDependencies
 from interview_ai.api.auth import verify_bearer
+from interview_ai.config import config
 from interview_ai.db.database import get_db
 from interview_ai.db.repositories import PostgresChunkStore
 from interview_ai.indexing.embedding import OpenAIEmbeddingProvider
@@ -32,6 +33,8 @@ def get_search_service(
     return SearchService(
         embedding_provider=embedding_provider,
         vector_store=PostgresVectorStore(db),
+        default_limit=config.search_top_k,
+        score_threshold=config.search_score_threshold,
     )
 
 

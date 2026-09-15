@@ -251,7 +251,6 @@ async def test_search_knowledge_returns_output_and_retrieved_sources() -> None:
     dependencies.search_service.search.assert_awaited_once_with(
         query="Python",
         owner_id="user-001",
-        limit=5,
     )
     assert json.loads(result.output) == [
         {

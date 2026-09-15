@@ -156,6 +156,19 @@ async def test_search_limits_result_count(store, records):
 
 
 @pytest.mark.asyncio
+async def test_search_filters_results_below_score_threshold(store, records):
+    result = await store.search(
+        records[0].vector,
+        owner_id="user-001",
+        limit=100,
+        score_threshold=0.99,
+    )
+
+    assert result
+    assert all(item.score >= 0.99 for item in result)
+
+
+@pytest.mark.asyncio
 async def test_search_rejects_different_vector_dimensions(store):
     with pytest.raises(ValueError, match="向量长度不一致"):
         await store.search([0.0, 0.1], owner_id="user-001", limit=3)

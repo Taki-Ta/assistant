@@ -12,6 +12,14 @@ class Settings(BaseSettings):
     embedding_model_name: str = Field(alias="EMBEDDING_MODEL_NAME")
 
     dimensions: int = Field(default=1536, alias="DIMENSIONS")
+    embedding_batch_size: int = Field(default=20, ge=1, alias="EMBEDDING_BATCH_SIZE")
+    search_top_k: int = Field(default=5, ge=1, alias="SEARCH_TOP_K")
+    search_score_threshold: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        alias="SEARCH_SCORE_THRESHOLD",
+    )
     is_debug: bool = Field(default=False, alias="IS_DEBUG")
     jwt_secret: str = Field(alias="JWT_SECRET")
     jwt_exp: float = Field(default=300, alias="JWT_EXP_SECONDS")

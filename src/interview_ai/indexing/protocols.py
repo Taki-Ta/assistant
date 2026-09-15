@@ -30,4 +30,5 @@ class VectorStore(Protocol):
         *,
         owner_id: str,
         limit: int = 5,
+        score_threshold: float | None = None,
     ) -> list[SearchResult]: ...

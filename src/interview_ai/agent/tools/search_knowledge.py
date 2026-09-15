@@ -5,8 +5,8 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 from interview_ai.indexing.models import SearchResult
 
+from ..models import RetrievedSource, ToolExecutionResult
 from ..runtime import AgentContext, ToolDependencies
-from ..models import ToolExecutionResult, RetrievedSource
 
 
 class SearchKnowledgeArguments(BaseModel):
@@ -44,7 +44,6 @@ class SearchKnowledgeTool:
         results = await dependencies.search_service.search(
             query=args.query,
             owner_id=context.owner_id,
-            limit=5,
         )
 
         return ToolExecutionResult(

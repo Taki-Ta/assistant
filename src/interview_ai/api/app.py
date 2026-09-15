@@ -20,6 +20,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             client=client,
             model=config.embedding_model_name,
             dimensions=config.dimensions,
+            batch_size=config.embedding_batch_size,
         )
         yield
 
