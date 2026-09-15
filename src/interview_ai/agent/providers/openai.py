@@ -11,6 +11,7 @@ from interview_ai.config import config
 
 from ..runtime import AgentContext, ToolDependencies
 from ..tools.default_registry import tool_registry
+from ..models import AgentResult, ToolExecutionResult
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,7 @@ class OpenAIProvider:
         self._max_tool_calls = (
             max_tool_calls if max_tool_calls is not None else config.max_tool_calls
         )
+        self._sources = ()
 
         if self._max_tool_calls < 1:
             raise ValueError("max_tool_calls 必须大于 0")
@@ -64,13 +66,16 @@ class OpenAIProvider:
         prompt: str | None,
         context: AgentContext,
         dependencies: ToolDependencies,
-    ) -> str:
+    ) -> AgentResult:
+
+        self._sources = ()
 
         # 附带工具的请求
         if prompt:
             self._messages.append({"role": "user", "content": prompt})
         response = await self.handle_response(context, dependencies)
-        return response.output_text
+        sources_by_chunk_id = {source.chunk_id: source for source in self._sources}
+        return AgentResult(response.output_text, tuple(sources_by_chunk_id.values()))
 
     async def handle_response(
         self,
@@ -108,23 +113,27 @@ class OpenAIProvider:
                         context,
                         dependencies,
                     )
+                    self._sources += result.sources
                 except Exception:
                     logger.exception("工具执行失败：%s", item.name)
-                    result = json.dumps(
-                        {
-                            "error": {
-                                "code": "tool_execution_failed",
-                                "message": f"工具 {item.name} 执行失败",
-                            }
-                        },
-                        ensure_ascii=False,
+                    result = ToolExecutionResult(
+                        json.dumps(
+                            {
+                                "error": {
+                                    "code": "tool_execution_failed",
+                                    "message": f"工具 {item.name} 执行失败",
+                                }
+                            },
+                            ensure_ascii=False,
+                        ),
+                        (),
                     )
 
                 self._messages.append(
                     {
                         "type": "function_call_output",
                         "call_id": item.call_id,
-                        "output": result,
+                        "output": result.output,
                     }
                 )
 

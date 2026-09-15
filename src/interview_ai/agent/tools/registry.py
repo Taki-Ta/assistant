@@ -4,6 +4,7 @@ from openai.types.responses.function_tool_param import FunctionToolParam
 
 from ..protocols import AgentTool
 from ..runtime import AgentContext, ToolDependencies
+from ..models import ToolExecutionResult
 
 
 class ToolRegistry:
@@ -28,7 +29,7 @@ class ToolRegistry:
         arguments: str,
         context: AgentContext,
         dependencies: ToolDependencies,
-    ) -> str:
+    ) -> ToolExecutionResult:
         tool = self.tools.get(name)
 
         if tool is None:

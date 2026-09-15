@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 from interview_ai.indexing.models import SearchResult
 
 from ..runtime import AgentContext, ToolDependencies
+from ..models import ToolExecutionResult, RetrievedSource
 
 
 class SearchKnowledgeArguments(BaseModel):
@@ -37,7 +38,7 @@ class SearchKnowledgeTool:
 
     async def invoke(
         self, arguments: str, context: AgentContext, dependencies: ToolDependencies
-    ) -> str:
+    ) -> ToolExecutionResult:
         args = SearchKnowledgeArguments.model_validate_json(arguments)
 
         results = await dependencies.search_service.search(
@@ -46,4 +47,7 @@ class SearchKnowledgeTool:
             limit=5,
         )
 
-        return TypeAdapter(list[SearchResult]).dump_json(results).decode("utf-8")
+        return ToolExecutionResult(
+            TypeAdapter(list[SearchResult]).dump_json(results).decode("utf-8"),
+            tuple(RetrievedSource.model_validate(item) for item in results),
+        )

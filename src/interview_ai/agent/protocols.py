@@ -3,6 +3,7 @@ from typing import Protocol
 from openai.types.responses.function_tool_param import FunctionToolParam
 
 from .runtime import AgentContext, ToolDependencies
+from .models import ToolExecutionResult
 
 
 # 上下文服务，包含上下文管理，上下文压缩等功能
@@ -25,7 +26,7 @@ class AgentTool(Protocol):
 
     async def invoke(
         self, arguments: str, context: AgentContext, dependencies: ToolDependencies
-    ) -> str:
+    ) -> ToolExecutionResult:
         """执行模型发起的工具调用，返回 JSON 字符串。"""
         ...
 
