@@ -1,12 +1,16 @@
+from collections.abc import AsyncIterator
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from interview_ai.agent.providers.openai import OpenAIProvider
+from interview_ai.agent.repository import ConversationRepository
 from interview_ai.agent.runtime import AgentContext, ToolDependencies
+from interview_ai.agent.services import ConversationService
 from interview_ai.api.auth import verify_bearer
 from interview_ai.config import config
-from interview_ai.db.database import get_db
+from interview_ai.db.database import get_conversation_db, get_db
 from interview_ai.db.repositories import PostgresChunkStore
 from interview_ai.indexing.embedding import OpenAIEmbeddingProvider
 from interview_ai.indexing.search_service import SearchService
@@ -14,6 +18,27 @@ from interview_ai.indexing.service import IndexService
 from interview_ai.indexing.vector_store import PostgresVectorStore
 
 DatabaseSession = Annotated[AsyncSession, Depends(get_db)]
+ConversationDatabaseSession = Annotated[
+    AsyncSession,
+    Depends(get_conversation_db),
+]
+
+
+async def get_conversation_service(
+    db: ConversationDatabaseSession,
+) -> AsyncIterator[ConversationService]:
+    async with OpenAIProvider() as provider:
+        yield ConversationService(
+            _db=db,
+            _repository=ConversationRepository(db),
+            _provider=provider,
+        )
+
+
+ConversationServiceDependency = Annotated[
+    ConversationService,
+    Depends(get_conversation_service),
+]
 
 
 def get_embedding_provider(request: Request) -> OpenAIEmbeddingProvider:

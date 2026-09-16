@@ -1,5 +1,6 @@
-from pydantic import BaseModel, ConfigDict
 from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict
 
 
 class SourceResponse(BaseModel):
@@ -17,8 +18,10 @@ class SourceResponse(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
+    session_id: UUID | None = None
 
 
 class ChatResponse(BaseModel):
     answer: str
-    sources: tuple[SourceResponse, ...] = ()
+    retrieved_sources: tuple[SourceResponse, ...] = ()
+    session_id: UUID

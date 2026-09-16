@@ -10,3 +10,8 @@ session_factory = async_sessionmaker(bind=engine, expire_on_commit=False)
 async def get_db():
     async with session_factory() as session:
         yield session
+
+
+async def get_conversation_db():
+    async with session_factory() as session:
+        yield session
