@@ -1,9 +1,10 @@
+from collections.abc import AsyncIterator, Sequence
 from typing import Protocol
 
 from openai.types.responses.function_tool_param import FunctionToolParam
 
+from .models import AgentEvent, AgentMessage, ToolExecutionResult
 from .runtime import AgentContext, ToolDependencies
-from .models import ToolExecutionResult
 
 
 # 上下文服务，包含上下文管理，上下文压缩等功能
@@ -29,6 +30,15 @@ class AgentTool(Protocol):
     ) -> ToolExecutionResult:
         """执行模型发起的工具调用，返回 JSON 字符串。"""
         ...
+
+
+class AgentProvider(Protocol):
+    def generate(
+        self,
+        messages: Sequence[AgentMessage],
+        context: AgentContext,
+        dependencies: ToolDependencies,
+    ) -> AsyncIterator[AgentEvent]: ...
 
 
 # class ChatInput(Protocol):

@@ -1,17 +1,26 @@
 import json
 import logging
+from collections.abc import AsyncIterator, Sequence
 from types import TracebackType
 from typing import Self
 
 from openai import AsyncOpenAI
-from openai.types.responses import Response, ResponseInputParam
+from openai.types.responses import EasyInputMessageParam, ResponseInputParam
 
 from interview_ai.agent.tools.registry import ToolRegistry
 from interview_ai.config import config
 
+from ..models import (
+    AgentEvent,
+    AgentMessage,
+    AssistantMessageEvent,
+    FunctionCallEvent,
+    FunctionCallOutputEvent,
+    ModelCompletedEvent,
+    ToolExecutionResult,
+)
 from ..runtime import AgentContext, ToolDependencies
 from ..tools.default_registry import tool_registry
-from ..models import AgentResult, ToolExecutionResult
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +34,6 @@ class OpenAIProvider:
         self,
         client: AsyncOpenAI | None = None,
         tools: ToolRegistry | None = None,
-        messages: ResponseInputParam | None = None,
         max_tool_calls: int | None = None,
     ) -> None:
         self._owns_client = client is None
@@ -36,12 +44,9 @@ class OpenAIProvider:
 
         self._tools = tools if tools is not None else tool_registry
 
-        self._messages = messages if messages is not None else []
         self._max_tool_calls = (
             max_tool_calls if max_tool_calls is not None else config.max_tool_calls
         )
-        self._sources = ()
-
         if self._max_tool_calls < 1:
             raise ValueError("max_tool_calls 必须大于 0")
 
@@ -63,35 +68,33 @@ class OpenAIProvider:
 
     async def generate(
         self,
-        prompt: str | None,
+        messages: Sequence[AgentMessage],
         context: AgentContext,
         dependencies: ToolDependencies,
-    ) -> AgentResult:
-
-        self._sources = ()
-
-        # 附带工具的请求
-        if prompt:
-            self._messages.append({"role": "user", "content": prompt})
-        response = await self.handle_response(context, dependencies)
-        sources_by_chunk_id = {source.chunk_id: source for source in self._sources}
-        return AgentResult(response.output_text, tuple(sources_by_chunk_id.values()))
-
-    async def handle_response(
-        self,
-        context: AgentContext,
-        dependencies: ToolDependencies,
-    ) -> Response:
+    ) -> AsyncIterator[AgentEvent]:
+        input_items: ResponseInputParam = [
+            EasyInputMessageParam(role=message.role, content=message.content)
+            for message in messages
+        ]
         tool_call_count = 0
+        input_tokens = 0
+        output_tokens = 0
+        total_tokens = 0
 
         while True:
             response = await self._client.responses.create(
                 model=config.chat_model,
-                input=self._messages,  # type: ignore
+                input=list(input_items),
                 tools=self._tools.definitions(),
             )
 
-            self._messages.extend(response.output)  # type: ignore
+            usage = getattr(response, "usage", None)
+            if usage is not None:
+                input_tokens += usage.input_tokens
+                output_tokens += usage.output_tokens
+                total_tokens += usage.total_tokens
+
+            input_items.extend(response.output)  # type: ignore[arg-type]
 
             has_tool_call = False
 
@@ -106,6 +109,14 @@ class OpenAIProvider:
                         f"工具调用次数超过限制：{self._max_tool_calls}"
                     )
 
+                yield FunctionCallEvent(
+                    provider_response_id=getattr(response, "id", None),
+                    provider_item_id=getattr(item, "id", None),
+                    call_id=item.call_id,
+                    arguments=json.loads(item.arguments),
+                    tool_name=item.name,
+                )
+
                 try:
                     result = await self._tools.invoke(
                         item.name,
@@ -113,7 +124,7 @@ class OpenAIProvider:
                         context,
                         dependencies,
                     )
-                    self._sources += result.sources
+                    tool_succeeded = True
                 except Exception:
                     logger.exception("工具执行失败：%s", item.name)
                     result = ToolExecutionResult(
@@ -128,14 +139,40 @@ class OpenAIProvider:
                         ),
                         (),
                     )
+                    tool_succeeded = False
 
-                self._messages.append(
+                input_items.append(
                     {
                         "type": "function_call_output",
                         "call_id": item.call_id,
                         "output": result.output,
                     }
                 )
+                yield FunctionCallOutputEvent(
+                    provider_response_id=getattr(response, "id", None),
+                    call_id=item.call_id,
+                    tool_name=item.name,
+                    succeeded=tool_succeeded,
+                    output=result.output,
+                    sources=result.sources,
+                )
 
             if not has_tool_call:
-                return response
+                message_item = next(
+                    (item for item in response.output if item.type == "message"),
+                    None,
+                )
+                yield AssistantMessageEvent(
+                    provider_response_id=getattr(response, "id", None),
+                    provider_item_id=getattr(message_item, "id", None),
+                    text=response.output_text,
+                )
+                yield ModelCompletedEvent(
+                    provider_response_id=getattr(response, "id", None),
+                    provider="openai",
+                    model=config.chat_model,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    total_tokens=total_tokens,
+                )
+                return

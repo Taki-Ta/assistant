@@ -5,7 +5,15 @@ from uuid import UUID
 
 import pytest
 
-from interview_ai.agent.models import RetrievedSource, ToolExecutionResult
+from interview_ai.agent.models import (
+    AgentMessage,
+    AssistantMessageEvent,
+    FunctionCallEvent,
+    FunctionCallOutputEvent,
+    ModelCompletedEvent,
+    RetrievedSource,
+    ToolExecutionResult,
+)
 from interview_ai.agent.providers.openai import (
     OpenAIProvider,
     ToolCallLimitExceeded,
@@ -22,6 +30,7 @@ DOCUMENT_ID = UUID("01900000-0000-7000-8000-000000000002")
 
 def _function_call(call_id: str = "call-001") -> SimpleNamespace:
     return SimpleNamespace(
+        id=f"item-{call_id}",
         type="function_call",
         name="search_knowledge",
         arguments='{"query":"Python"}',
@@ -31,7 +40,8 @@ def _function_call(call_id: str = "call-001") -> SimpleNamespace:
 
 def _final_response(text: str = "Python 是一种编程语言。") -> SimpleNamespace:
     return SimpleNamespace(
-        output=[SimpleNamespace(type="message")],
+        id="response-final",
+        output=[SimpleNamespace(id="message-final", type="message")],
         output_text=text,
     )
 
@@ -85,11 +95,27 @@ async def test_generate_executes_tool_and_returns_final_answer() -> None:
     context, dependencies = _runtime()
     provider = OpenAIProvider(client=client, tools=registry)
 
-    result = await provider.generate("Python 是什么？", context, dependencies)
+    events = [
+        event
+        async for event in provider.generate(
+            [AgentMessage(role="user", content="Python 是什么？")],
+            context,
+            dependencies,
+        )
+    ]
 
-    assert result.answer == "Python 是一种编程语言。"
-    assert result.sources == (source,)
+    assert [type(event) for event in events] == [
+        FunctionCallEvent,
+        FunctionCallOutputEvent,
+        AssistantMessageEvent,
+        ModelCompletedEvent,
+    ]
+    assert events[1].sources == (source,)
+    assert events[2].text == "Python 是一种编程语言。"
     assert client.responses.create.await_count == 2
+    assert client.responses.create.await_args_list[0].kwargs["input"] == [
+        {"role": "user", "content": "Python 是什么？"}
+    ]
     tool.invoke.assert_awaited_once_with('{"query":"Python"}', context, dependencies)
     second_input = client.responses.create.await_args_list[1].kwargs["input"]
     tool_outputs = [
@@ -128,10 +154,24 @@ async def test_generate_returns_tool_failure_to_model() -> None:
     context, dependencies = _runtime()
     provider = OpenAIProvider(client=client, tools=ToolRegistry([tool]))
 
-    result = await provider.generate("查询知识库", context, dependencies)
+    events = [
+        event
+        async for event in provider.generate(
+            [AgentMessage(role="user", content="查询知识库")],
+            context,
+            dependencies,
+        )
+    ]
 
-    assert result.answer == "知识库暂时不可用。"
-    assert result.sources == ()
+    tool_event = next(
+        event for event in events if isinstance(event, FunctionCallOutputEvent)
+    )
+    assert tool_event.succeeded is False
+    assert tool_event.sources == ()
+    assert (
+        next(event.text for event in events if isinstance(event, AssistantMessageEvent))
+        == "知识库暂时不可用。"
+    )
     second_input = client.responses.create.await_args_list[1].kwargs["input"]
     tool_output = next(
         item
@@ -174,7 +214,14 @@ async def test_generate_stops_after_configured_tool_call_limit() -> None:
     )
 
     with pytest.raises(ToolCallLimitExceeded, match="工具调用次数超过限制：1"):
-        await provider.generate("不断搜索", context, dependencies)
+        _ = [
+            event
+            async for event in provider.generate(
+                [AgentMessage(role="user", content="不断搜索")],
+                context,
+                dependencies,
+            )
+        ]
 
     assert tool.invoke.await_count == 1
 
@@ -188,7 +235,7 @@ async def test_registry_rejects_unknown_tool() -> None:
 
 
 @pytest.mark.asyncio
-async def test_generate_deduplicates_sources_by_chunk_id() -> None:
+async def test_generate_emits_sources_for_each_tool_call() -> None:
     client = AsyncMock()
     client.responses.create = AsyncMock(
         side_effect=[
@@ -222,9 +269,49 @@ async def test_generate_deduplicates_sources_by_chunk_id() -> None:
     context, dependencies = _runtime()
     provider = OpenAIProvider(client=client, tools=ToolRegistry([tool]))
 
-    result = await provider.generate("搜索两次", context, dependencies)
+    events = [
+        event
+        async for event in provider.generate(
+            [AgentMessage(role="user", content="搜索两次")],
+            context,
+            dependencies,
+        )
+    ]
+    output_events = [
+        event for event in events if isinstance(event, FunctionCallOutputEvent)
+    ]
 
-    assert result.sources == (latest_source,)
+    assert [event.sources for event in output_events] == [
+        (first_source,),
+        (latest_source,),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_generate_converts_conversation_history_to_openai_input() -> None:
+    client = AsyncMock()
+    client.responses.create = AsyncMock(return_value=_final_response("继续回答"))
+    context, dependencies = _runtime()
+    provider = OpenAIProvider(client=client, tools=ToolRegistry())
+
+    _ = [
+        event
+        async for event in provider.generate(
+            [
+                AgentMessage(role="user", content="第一问"),
+                AgentMessage(role="assistant", content="第一答"),
+                AgentMessage(role="user", content="继续问"),
+            ],
+            context,
+            dependencies,
+        )
+    ]
+
+    assert client.responses.create.await_args.kwargs["input"] == [
+        {"role": "user", "content": "第一问"},
+        {"role": "assistant", "content": "第一答"},
+        {"role": "user", "content": "继续问"},
+    ]
 
 
 @pytest.mark.asyncio

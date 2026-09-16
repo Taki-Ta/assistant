@@ -2,9 +2,9 @@ from collections.abc import Iterable
 
 from openai.types.responses.function_tool_param import FunctionToolParam
 
+from ..models import ToolExecutionResult
 from ..protocols import AgentTool
 from ..runtime import AgentContext, ToolDependencies
-from ..models import ToolExecutionResult
 
 
 class ToolRegistry:
