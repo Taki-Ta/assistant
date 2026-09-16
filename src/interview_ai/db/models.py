@@ -5,6 +5,7 @@ from uuid import UUID
 from pgvector.sqlalchemy import VECTOR
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     Column,
     DateTime,
@@ -17,7 +18,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlmodel import Field, SQLModel
 from uuid6 import uuid7
 
@@ -32,6 +33,28 @@ class DocumentStatus(StrEnum):
     INDEXING = "indexing"
     INDEXED = "indexed"
     FAILED = "failed"
+
+
+class TurnStatus(StrEnum):
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class ItemType(StrEnum):
+    MESSAGE = "message"
+    REASONING = "reasoning"
+    FUNCTION_CALL = "function_call"
+    FUNCTION_CALL_OUTPUT = "function_call_output"
+    COMPACTION = "compaction"
+
+
+class ItemRole(StrEnum):
+    SYSTEM = "system"
+    DEVELOPER = "developer"
+    USER = "user"
+    ASSISTANT = "assistant"
 
 
 class Document(SQLModel, table=True):
@@ -171,5 +194,196 @@ class VectorRecord(SQLModel, table=True):
             nullable=False,
             server_default=func.now(),
             onupdate=func.now(),
+        ),
+    )
+
+
+class Session(SQLModel, table=True):
+    """用户拥有的 AI 会话；不依赖具体模型供应商的会话对象。"""
+
+    __tablename__ = "sessions"
+    __table_args__ = (Index("ix_sessions_owner_updated", "owner_id", "updated_at"),)
+
+    id: UUID = Field(default_factory=uuid7, primary_key=True)
+    owner_id: str = Field(sa_column=Column(String(128), nullable=False))
+    title: str | None = Field(
+        default=None,
+        sa_column=Column(String(255), nullable=True),
+    )
+    is_deleted: bool = Field(
+        default=False,
+        sa_column=Column(
+            Boolean,
+            nullable=False,
+            server_default=text("false"),
+        ),
+    )
+    created_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(
+            DateTime(timezone=True), nullable=False, server_default=func.now()
+        ),
+    )
+    updated_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=False,
+            server_default=func.now(),
+            onupdate=func.now(),
+        ),
+    )
+
+
+class Turn(SQLModel, table=True):
+    """从一次用户输入开始，到产生最终回答为止的完整执行过程。"""
+
+    __tablename__ = "turns"
+    __table_args__ = (
+        UniqueConstraint(
+            "session_id",
+            "sequence",
+            name="uq_turns_session_sequence",
+        ),
+        CheckConstraint("sequence >= 0", name="ck_turns_sequence"),
+        CheckConstraint(
+            "status IN ('in_progress', 'completed', 'failed', 'cancelled')",
+            name="ck_turns_status",
+        ),
+        CheckConstraint(
+            "input_tokens IS NULL OR input_tokens >= 0",
+            name="ck_turns_input_tokens",
+        ),
+        CheckConstraint(
+            "output_tokens IS NULL OR output_tokens >= 0",
+            name="ck_turns_output_tokens",
+        ),
+        CheckConstraint(
+            "total_tokens IS NULL OR total_tokens >= 0",
+            name="ck_turns_total_tokens",
+        ),
+        Index("ix_turns_session_id", "session_id"),
+        Index("ix_turns_status_updated", "status", "updated_at"),
+    )
+
+    id: UUID = Field(default_factory=uuid7, primary_key=True)
+    session_id: UUID = Field(
+        sa_column=Column(
+            ForeignKey("sessions.id", ondelete="CASCADE"),
+            nullable=False,
+        )
+    )
+    sequence: int = Field(sa_column=Column(Integer, nullable=False))
+    status: TurnStatus = Field(
+        default=TurnStatus.IN_PROGRESS,
+        sa_column=Column(
+            String(32),
+            nullable=False,
+            server_default=text("'in_progress'"),
+        ),
+    )
+    provider: str | None = Field(
+        default=None,
+        sa_column=Column(String(64), nullable=True),
+    )
+    model: str | None = Field(
+        default=None,
+        sa_column=Column(String(128), nullable=True),
+    )
+    final_provider_response_id: str | None = Field(
+        default=None,
+        sa_column=Column(String(255), nullable=True),
+    )
+    input_tokens: int | None = Field(default=None, ge=0)
+    output_tokens: int | None = Field(default=None, ge=0)
+    total_tokens: int | None = Field(default=None, ge=0)
+    error_message: str | None = Field(
+        default=None,
+        sa_column=Column(Text, nullable=True),
+    )
+    created_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(
+            DateTime(timezone=True), nullable=False, server_default=func.now()
+        ),
+    )
+    updated_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=False,
+            server_default=func.now(),
+            onupdate=func.now(),
+        ),
+    )
+    completed_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+
+
+class ConversationItem(SQLModel, table=True):
+    """按顺序保存消息、推理、工具调用、工具结果和压缩项。"""
+
+    __tablename__ = "conversation_items"
+    __table_args__ = (
+        UniqueConstraint(
+            "turn_id",
+            "sequence",
+            name="uq_conversation_items_turn_sequence",
+        ),
+        CheckConstraint(
+            "sequence >= 0",
+            name="ck_conversation_items_sequence",
+        ),
+        CheckConstraint(
+            "role IS NULL OR role IN ('system', 'developer', 'user', 'assistant')",
+            name="ck_conversation_items_role",
+        ),
+        Index("ix_conversation_items_turn_id", "turn_id"),
+        Index("ix_conversation_items_call_id", "call_id"),
+    )
+
+    id: UUID = Field(default_factory=uuid7, primary_key=True)
+    turn_id: UUID = Field(
+        sa_column=Column(
+            ForeignKey("turns.id", ondelete="CASCADE"),
+            nullable=False,
+        )
+    )
+    sequence: int = Field(sa_column=Column(Integer, nullable=False))
+    item_type: ItemType = Field(sa_column=Column(String(64), nullable=False))
+    role: ItemRole | None = Field(
+        default=None,
+        sa_column=Column(String(32), nullable=True),
+    )
+    provider_item_id: str | None = Field(
+        default=None,
+        sa_column=Column(String(255), nullable=True),
+    )
+    call_id: str | None = Field(
+        default=None,
+        sa_column=Column(String(255), nullable=True),
+    )
+    tool_name: str | None = Field(
+        default=None,
+        sa_column=Column(String(255), nullable=True),
+    )
+    text_content: str | None = Field(
+        default=None,
+        sa_column=Column(Text, nullable=True),
+    )
+    payload: dict[str, object] = Field(
+        default_factory=dict,
+        sa_column=Column(
+            JSONB,
+            nullable=False,
+            server_default=text("'{}'::jsonb"),
+        ),
+    )
+    created_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(
+            DateTime(timezone=True), nullable=False, server_default=func.now()
         ),
     )
