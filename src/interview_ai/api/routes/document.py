@@ -36,8 +36,16 @@ async def get_documents(claims: Claims, db: DatabaseSession) -> list[Document]:
         .order_by(Document.updated_at.desc())
     )
     items = (await db.scalars(stmt)).all()
-
-    return [item.model_copy(update={"content": item.content[:30]+"..."}) for item in items]
+    return [
+        item.model_copy(
+            update={
+                "content": item.content[:30] + "..."
+                if len(item.content) > 30
+                else item.content
+            }
+        )
+        for item in items
+    ]
 
 
 @router.post("", response_model=Document, status_code=status.HTTP_201_CREATED)
