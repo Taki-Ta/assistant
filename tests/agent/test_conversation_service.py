@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncIterator
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID
@@ -267,6 +268,74 @@ async def test_chat_persists_partial_events_and_marks_turn_failed() -> None:
     assert partial_item.item_type == ItemType.FUNCTION_CALL
     repository.fail_turn.assert_awaited_once()
     repository.complete_turn.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("stage", ["build", "generate", "persist"])
+async def test_chat_cancellation_marks_turn_failed_and_propagates(stage) -> None:
+    service, db, repository, provider = _service()
+    repository.create_session.return_value = Session(id=SESSION_ID, owner_id="user-001")
+    turn = Turn(id=TURN_ID, session_id=SESSION_ID, sequence=0)
+    repository.create_turn.return_value = turn
+    started = asyncio.Event()
+
+    async def wait_for_cancellation():
+        started.set()
+        await asyncio.Event().wait()
+
+    if stage == "build":
+        service._context_builder = MagicMock()
+
+        async def build(*args):
+            await wait_for_cancellation()
+
+        service._context_builder.build = AsyncMock(side_effect=build)
+
+    async def generate(*args, **kwargs):
+        yield FunctionCallEvent(
+            call_id="call-1",
+            tool_name="search_knowledge",
+            arguments={"query": "Python"},
+        )
+        if stage == "generate":
+            await wait_for_cancellation()
+        yield AssistantMessageEvent(text="回答")
+        yield _completed()
+
+    provider.generate.side_effect = generate
+    if stage == "persist":
+        append_count = 0
+
+        async def append_items(items):
+            nonlocal append_count
+            append_count += 1
+            if append_count == 2:
+                await wait_for_cancellation()
+
+        repository.append_items.side_effect = append_items
+
+    context, dependencies = _runtime()
+    task = asyncio.create_task(service.chat(None, "用户问题", context, dependencies))
+    try:
+        await asyncio.wait_for(started.wait(), timeout=1)
+    finally:
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    repository.fail_turn.assert_awaited_once()
+    failure = repository.fail_turn.await_args
+    assert failure.args == (turn,)
+    assert failure.kwargs["error_message"] == "请求已取消"
+    assert failure.kwargs["completed_at"] is not None
+    repository.complete_turn.assert_not_awaited()
+    assert db.begin.call_count == (3 if stage == "persist" else 2)
+    user_item = repository.append_items.await_args_list[0].args[0][0]
+    assert user_item.text_content == "用户问题"
+    if stage != "build":
+        saved_events = repository.append_items.await_args_list[-1].args[0]
+        assert saved_events[0].item_type == ItemType.FUNCTION_CALL
+        assert saved_events[0].sequence == 1
 
 
 @pytest.mark.asyncio

@@ -1,3 +1,4 @@
+from asyncio import CancelledError
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -69,6 +70,8 @@ class ConversationService:
                 ]
             )
 
+        # 回滚会使 ORM 属性过期，收尾时使用已保存的 ID，避免隐式数据库读取。
+        turn_id = turn.id
         conversation_events: list[ConversationEvent] = []
         retrieved_sources: dict[UUID, RetrievedSource] = {}
         answer: str | None = None
@@ -86,7 +89,7 @@ class ConversationService:
                     await self._repository.append_items(
                         [
                             ConversationItem(
-                                turn_id=turn.id,
+                                turn_id=turn_id,
                                 sequence=1,
                                 item_type=ItemType.COMPACTION,
                                 role=ItemRole.USER,
@@ -121,32 +124,34 @@ class ConversationService:
             if answer is None or completed is None:
                 raise RuntimeError("模型响应未正常完成")
 
-        except Exception as exc:
             async with self._db.begin():
                 await self._append_events(
-                    turn.id, conversation_events, first_event_sequence
+                    turn_id, conversation_events, first_event_sequence
+                )
+                await self._repository.complete_turn(
+                    turn,
+                    provider=completed.provider,
+                    model=completed.model,
+                    response_id=completed.provider_response_id,
+                    input_tokens=completed.input_tokens,
+                    output_tokens=completed.output_tokens,
+                    total_tokens=completed.total_tokens,
+                    completed_at=utc_now(),
+                )
+        except (Exception, CancelledError) as exc:
+            # 取消同样需要收尾；事务退出后保存，再继续向外传播取消。
+            async with self._db.begin():
+                await self._append_events(
+                    turn_id, conversation_events, first_event_sequence
                 )
                 await self._repository.fail_turn(
                     turn,
-                    error_message=str(exc),
+                    error_message=(
+                        "请求已取消" if isinstance(exc, CancelledError) else str(exc)
+                    ),
                     completed_at=utc_now(),
                 )
             raise
-
-        async with self._db.begin():
-            await self._append_events(
-                turn.id, conversation_events, first_event_sequence
-            )
-            await self._repository.complete_turn(
-                turn,
-                provider=completed.provider,
-                model=completed.model,
-                response_id=completed.provider_response_id,
-                input_tokens=completed.input_tokens,
-                output_tokens=completed.output_tokens,
-                total_tokens=completed.total_tokens,
-                completed_at=utc_now(),
-            )
 
         sources = tuple(
             sorted(
