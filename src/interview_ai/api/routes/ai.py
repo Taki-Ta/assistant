@@ -1,5 +1,15 @@
 from fastapi import APIRouter, HTTPException, status
+from openai import OpenAIError
 
+from interview_ai.agent.context.budget import (
+    CompactionError,
+    ContextBudgetExceeded,
+    InputTooLarge,
+)
+from interview_ai.agent.providers.openai import (
+    ModelResponseError,
+    ToolCallLimitExceeded,
+)
 from interview_ai.agent.services import SessionNotFoundError
 
 from ..dependencies import (
@@ -30,6 +40,26 @@ async def chat(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Session not found",
+        ) from exc
+    except InputTooLarge as exc:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail="问题过长，无法放入当前上下文预算，请缩短输入",
+        ) from exc
+    except ContextBudgetExceeded as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="上下文超过当前预算，无法完成本轮请求",
+        ) from exc
+    except (
+        CompactionError,
+        ModelResponseError,
+        OpenAIError,
+        ToolCallLimitExceeded,
+    ) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="模型处理未正常完成，请稍后重试",
         ) from exc
 
     return ChatResponse(

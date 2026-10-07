@@ -43,3 +43,12 @@ Content-Type: application/json
     "query": "保存",
     "limit": 5
 }
+
+### chat
+POST http://{{host}}/{{prefix}}/chat
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "message": "介绍下你自己"
+}
