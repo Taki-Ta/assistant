@@ -2,7 +2,9 @@
 
 # from dotenv import load_dotenv
 
-from pydantic import Field
+from typing import Self
+
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -27,9 +29,30 @@ class Settings(BaseSettings):
     chat_model: str = Field(alias="CHAT_MODEL")
     chat_api_host: str = Field(alias="CHAT_API_HOST")
     chat_api_key: str = Field(alias="CHAT_API_KEY")
+    chat_context_window: int = Field(
+        default=32768,
+        gt=0,
+        alias="CHAT_CONTEXT_WINDOW",
+        description="模型允许的最大上下文 Token 数，请按模型服务说明设置",
+    )
+    chat_context_budget: int = Field(
+        default=32768,
+        gt=0,
+        alias="CHAT_CONTEXT_BUDGET",
+        description="单次模型请求的总 Token 预算，包含输入和输出预留",
+    )
     max_tool_calls: int = Field(default=8, ge=1, alias="MAX_TOOL_CALLS")
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+
+    @model_validator(mode="after")
+    def validate_chat_context_budget(self) -> Self:
+        if self.chat_context_budget > self.chat_context_window:
+            raise ValueError(
+                "CHAT_CONTEXT_BUDGET 不能超过 CHAT_CONTEXT_WINDOW；"
+                "请降低请求预算，或按模型服务说明设置上下文容量"
+            )
+        return self
 
 
 # load_dotenv()
