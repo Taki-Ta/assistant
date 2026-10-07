@@ -56,5 +56,46 @@ async def test_list_message_history_returns_query_result_in_statement_order() ->
     sql = str(statement)
     assert "turns.sequence <" in sql
     assert "turns.status =" in sql
+    assert "conversation_items.role =" in sql
+    assert statement.compile().params["status_1"] == "completed"
+    assert statement.compile().params["status_2"] == "failed"
+    assert statement.compile().params["role_1"] == "user"
     assert "conversation_items.item_type =" in sql
     assert len(statement._order_by_clauses) == 2
+
+
+@pytest.mark.asyncio
+async def test_context_history_restores_checkpoint_and_filters_covered_turns():
+    db = MagicMock(spec=AsyncSession)
+    checkpoint = ConversationItem(
+        turn_id=TURN_ID,
+        sequence=1,
+        item_type=ItemType.COMPACTION,
+        role=ItemRole.USER,
+        text_content="摘要",
+        payload={"covered_through_turn_id": str(TURN_ID)},
+    )
+    db.scalar = AsyncMock(return_value=checkpoint)
+    db.scalars = AsyncMock(return_value=[])
+    result = await ConversationRepository(db).list_context_history(
+        SESSION_ID,
+        before_turn_sequence=3,
+    )
+    assert result == [checkpoint]
+    statement = db.scalars.await_args.args[0]
+    assert "turns.sequence > (SELECT turns.sequence" in str(statement)
+    assert TURN_ID in statement.compile().params.values()
+
+
+@pytest.mark.asyncio
+async def test_context_history_without_checkpoint_returns_original_history():
+    db = MagicMock(spec=AsyncSession)
+    db.scalar = AsyncMock(return_value=None)
+    db.scalars = AsyncMock(return_value=[])
+    assert (
+        await ConversationRepository(db).list_context_history(
+            SESSION_ID,
+            before_turn_sequence=0,
+        )
+        == []
+    )

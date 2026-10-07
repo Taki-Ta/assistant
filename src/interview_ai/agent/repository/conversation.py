@@ -2,12 +2,13 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col
 
 from interview_ai.db.models import (
     ConversationItem,
+    ItemRole,
     ItemType,
     Session,
     Turn,
@@ -70,6 +71,7 @@ class ConversationRepository:
         session_id: UUID,
         *,
         before_turn_sequence: int,
+        after_turn_id: UUID | None = None,
     ) -> list[ConversationItem]:
         statement = (
             select(ConversationItem)
@@ -77,7 +79,13 @@ class ConversationRepository:
             .where(
                 col(Turn.session_id) == session_id,
                 col(Turn.sequence) < before_turn_sequence,
-                col(Turn.status) == TurnStatus.COMPLETED,
+                or_(
+                    col(Turn.status) == TurnStatus.COMPLETED,
+                    and_(
+                        col(Turn.status) == TurnStatus.FAILED,
+                        col(ConversationItem.role) == ItemRole.USER,
+                    ),
+                ),
                 col(ConversationItem.item_type) == ItemType.MESSAGE,
             )
             .order_by(
@@ -85,8 +93,47 @@ class ConversationRepository:
                 col(ConversationItem.sequence),
             )
         )
+        if after_turn_id is not None:
+            covered_sequence = (
+                select(Turn.sequence)
+                .where(
+                    col(Turn.id) == after_turn_id, col(Turn.session_id) == session_id
+                )
+                .correlate(None)
+                .scalar_subquery()
+            )
+            statement = statement.where(col(Turn.sequence) > covered_sequence)
         result = await self._db.scalars(statement)
         return list(result)
+
+    async def list_context_history(
+        self,
+        session_id: UUID,
+        *,
+        before_turn_sequence: int,
+    ) -> list[ConversationItem]:
+        """返回最新持久化摘要和覆盖边界之后的问答，原始历史不删除。"""
+        statement = (
+            select(ConversationItem)
+            .join(Turn, col(ConversationItem.turn_id) == col(Turn.id))
+            .where(
+                col(Turn.session_id) == session_id,
+                col(Turn.sequence) < before_turn_sequence,
+                col(ConversationItem.item_type) == ItemType.COMPACTION,
+            )
+            .order_by(col(Turn.sequence).desc(), col(ConversationItem.sequence).desc())
+            .limit(1)
+        )
+        checkpoint = await self._db.scalar(statement)
+        after_turn_id = None
+        if checkpoint is not None:
+            after_turn_id = UUID(str(checkpoint.payload["covered_through_turn_id"]))
+        history = await self.list_message_history(
+            session_id,
+            before_turn_sequence=before_turn_sequence,
+            after_turn_id=after_turn_id,
+        )
+        return [checkpoint, *history] if checkpoint is not None else history
 
     async def complete_turn(
         self,

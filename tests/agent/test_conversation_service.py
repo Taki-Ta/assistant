@@ -4,7 +4,10 @@ from uuid import UUID
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
+from uuid6 import uuid7
 
+from interview_ai.agent.context.builder import ContextBuilder
+from interview_ai.agent.context.models import BuiltContext, CompactionCheckpoint
 from interview_ai.agent.models import (
     AgentEvent,
     AgentMessage,
@@ -34,9 +37,10 @@ def _service() -> tuple[
 ]:
     db = MagicMock(spec=AsyncSession)
     repository = AsyncMock(spec=ConversationRepository)
-    repository.list_message_history.return_value = []
+    repository.list_context_history.return_value = []
     provider = MagicMock()
-    service = ConversationService(db, repository, provider)
+    provider.tool_definitions.return_value = []
+    service = ConversationService(db, repository, provider, ContextBuilder())
     return service, db, repository, provider
 
 
@@ -100,7 +104,7 @@ async def test_chat_uses_two_short_transactions() -> None:
     assert db.begin.call_count == 2
     repository.create_session.assert_awaited_once_with("user-001")
     repository.create_turn.assert_awaited_once_with(SESSION_ID)
-    repository.list_message_history.assert_awaited_once_with(
+    repository.list_context_history.assert_awaited_once_with(
         SESSION_ID,
         before_turn_sequence=0,
     )
@@ -119,7 +123,7 @@ async def test_chat_passes_completed_message_history_to_provider() -> None:
     turn = Turn(id=TURN_ID, session_id=SESSION_ID, sequence=2)
     repository.get_session.return_value = session
     repository.create_turn.return_value = turn
-    repository.list_message_history.return_value = [
+    repository.list_context_history.return_value = [
         ConversationItem(
             turn_id=TURN_ID,
             sequence=0,
@@ -143,7 +147,7 @@ async def test_chat_passes_completed_message_history_to_provider() -> None:
 
     await service.chat(SESSION_ID, "第二问", context, dependencies)
 
-    repository.list_message_history.assert_awaited_once_with(
+    repository.list_context_history.assert_awaited_once_with(
         SESSION_ID,
         before_turn_sequence=2,
     )
@@ -156,6 +160,9 @@ async def test_chat_passes_completed_message_history_to_provider() -> None:
         context,
         dependencies,
     )
+    assert provider.generate.call_args.kwargs == {
+        "instructions": service._context_builder.instructions,
+    }
     current_user_item = repository.append_items.await_args_list[0].args[0][0]
     assert current_user_item.text_content == "第二问"
     assert current_user_item.payload == {}
@@ -260,3 +267,48 @@ async def test_chat_persists_partial_events_and_marks_turn_failed() -> None:
     assert partial_item.item_type == ItemType.FUNCTION_CALL
     repository.fail_turn.assert_awaited_once()
     repository.complete_turn.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fails", [False, True])
+async def test_compaction_is_saved_before_generation_even_when_generation_fails(fails):
+    service, db, repository, provider = _service()
+    repository.get_session.return_value = Session(id=SESSION_ID, owner_id="user-001")
+    repository.create_turn.return_value = Turn(
+        id=TURN_ID, session_id=SESSION_ID, sequence=2
+    )
+    checkpoint = CompactionCheckpoint(text="历史摘要", covered_through_turn_id=uuid7())
+    service._context_builder = MagicMock()
+    service._context_builder.build = AsyncMock(
+        return_value=BuiltContext(
+            instructions="规则",
+            messages=[AgentMessage(role="user", content="继续")],
+            estimated_input_tokens=100,
+            compaction=checkpoint,
+        )
+    )
+
+    def generate(*args, **kwargs):
+        saved = repository.append_items.await_args_list[1].args[0][0]
+        assert saved.item_type == ItemType.COMPACTION
+        assert saved.sequence == 1
+        assert saved.payload["covered_through_turn_id"] == str(
+            checkpoint.covered_through_turn_id
+        )
+        return _events(
+            AssistantMessageEvent(text="回答"),
+            *([] if fails else [_completed()]),
+            error=RuntimeError("模型失败") if fails else None,
+        )
+
+    provider.generate.side_effect = generate
+    context, dependencies = _runtime()
+    if fails:
+        with pytest.raises(RuntimeError, match="模型失败"):
+            await service.chat(SESSION_ID, "继续", context, dependencies)
+        repository.fail_turn.assert_awaited_once()
+    else:
+        await service.chat(SESSION_ID, "继续", context, dependencies)
+        repository.complete_turn.assert_awaited_once()
+    assert db.begin.call_count == 3
+    assert repository.append_items.await_args_list[-1].args[0][0].sequence == 2

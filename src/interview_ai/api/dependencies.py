@@ -4,6 +4,8 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from interview_ai.agent.context.budget import ContextBudget
+from interview_ai.agent.context.builder import ContextBuilder
 from interview_ai.agent.providers.openai import OpenAIProvider
 from interview_ai.agent.repository import ConversationRepository
 from interview_ai.agent.runtime import AgentContext, ToolDependencies
@@ -27,11 +29,13 @@ ConversationDatabaseSession = Annotated[
 async def get_conversation_service(
     db: ConversationDatabaseSession,
 ) -> AsyncIterator[ConversationService]:
-    async with OpenAIProvider() as provider:
+    budget = ContextBudget.configured()
+    async with OpenAIProvider(budget=budget) as provider:
         yield ConversationService(
             _db=db,
             _repository=ConversationRepository(db),
             _provider=provider,
+            _context_builder=ContextBuilder(summarizer=provider, budget=budget),
         )
 
 

@@ -3,6 +3,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from interview_ai.agent.context.builder import ContextBuilder
 from interview_ai.agent.models import (
     AgentMessage,
     AgentResult,
@@ -28,6 +29,7 @@ class ConversationService:
     _db: AsyncSession
     _repository: ConversationRepository
     _provider: AgentProvider
+    _context_builder: ContextBuilder
 
     async def chat(
         self,
@@ -51,14 +53,10 @@ class ConversationService:
                     raise SessionNotFoundError(str(session_id))
 
             turn = await self._repository.create_turn(session.id)
-            history_items = await self._repository.list_message_history(
+            history_items = await self._repository.list_context_history(
                 session.id,
                 before_turn_sequence=turn.sequence,
             )
-            messages = [
-                *(_to_agent_message(item) for item in history_items),
-                current_message,
-            ]
             await self._repository.append_items(
                 [
                     ConversationItem(
@@ -75,12 +73,39 @@ class ConversationService:
         retrieved_sources: dict[UUID, RetrievedSource] = {}
         answer: str | None = None
         completed: ModelCompletedEvent | None = None
+        first_event_sequence = 1
 
         try:
+            built_context = await self._context_builder.build(
+                message, history_items, self._provider.tool_definitions()
+            )
+            if built_context.compaction is not None:
+                checkpoint = built_context.compaction
+                # 摘要调用已在事务外完成；先持久化，后续回答失败仍能恢复摘要。
+                async with self._db.begin():
+                    await self._repository.append_items(
+                        [
+                            ConversationItem(
+                                turn_id=turn.id,
+                                sequence=1,
+                                item_type=ItemType.COMPACTION,
+                                role=ItemRole.USER,
+                                text_content=checkpoint.text,
+                                payload={
+                                    "covered_through_turn_id": str(
+                                        checkpoint.covered_through_turn_id
+                                    ),
+                                    "estimated_input_tokens": built_context.estimated_input_tokens,
+                                },
+                            )
+                        ]
+                    )
+                first_event_sequence = 2
             async for event in self._provider.generate(
-                messages,
+                built_context.messages,
                 context,
                 dependencies,
+                instructions=built_context.instructions,
             ):
                 if isinstance(event, ModelCompletedEvent):
                     completed = event
@@ -95,9 +120,12 @@ class ConversationService:
 
             if answer is None or completed is None:
                 raise RuntimeError("模型响应未正常完成")
+
         except Exception as exc:
             async with self._db.begin():
-                await self._append_events(turn.id, conversation_events)
+                await self._append_events(
+                    turn.id, conversation_events, first_event_sequence
+                )
                 await self._repository.fail_turn(
                     turn,
                     error_message=str(exc),
@@ -106,7 +134,9 @@ class ConversationService:
             raise
 
         async with self._db.begin():
-            await self._append_events(turn.id, conversation_events)
+            await self._append_events(
+                turn.id, conversation_events, first_event_sequence
+            )
             await self._repository.complete_turn(
                 turn,
                 provider=completed.provider,
@@ -135,6 +165,7 @@ class ConversationService:
         self,
         turn_id: UUID,
         events: list[ConversationEvent],
+        start_sequence: int = 1,
     ) -> None:
         if not events:
             return
@@ -142,7 +173,7 @@ class ConversationService:
         await self._repository.append_items(
             [
                 _event_to_item(turn_id, sequence, event)
-                for sequence, event in enumerate(events, start=1)
+                for sequence, event in enumerate(events, start=start_sequence)
             ]
         )
 
@@ -213,16 +244,4 @@ def _event_to_item(
                 for source in event.sources
             ],
         },
-    )
-
-
-def _to_agent_message(item: ConversationItem) -> AgentMessage:
-    if item.role not in (ItemRole.USER, ItemRole.ASSISTANT):
-        raise ValueError(f"不支持的历史消息角色：{item.role}")
-    if item.text_content is None:
-        raise ValueError("历史消息缺少 text_content")
-
-    return AgentMessage(
-        role="user" if item.role == ItemRole.USER else "assistant",
-        content=item.text_content,
     )
