@@ -240,9 +240,13 @@ Tests marked `network` require configured external services.
 - Chat responses are non-streaming.
 - Conversation recovery replays completed user and assistant messages, but not
   previous tool traces.
-- Conversation history does not yet have a token budget, sliding window, or
-  compaction strategy.
-- Reasoning and compaction item types are reserved but not currently produced.
+- Context uses approximate token counts and a configurable total budget. Older
+  history is summarized in bounded batches; recent turns and the current question
+  are retained when space permits. Checkpoints persist as compaction items, and
+  subsequent requests restore the latest checkpoint plus uncovered history.
+- Oversized tool-loop requests fail rather than compressing active tool traces.
+  Summary calls use the chat model but are not included in the Turn's chat usage
+  totals. Reasoning items are not currently persisted.
 - Migration execution is not tracked by Alembic; deployments must track applied
   SQL scripts.
 
@@ -492,8 +496,11 @@ uv run ruff format --check src tests
 
 - Chat 接口目前不是流式响应。
 - 会话恢复会重放已完成的用户和助手消息，但不会重放此前的工具执行轨迹。
-- 历史上下文尚未实现 Token 预算、滑动窗口或压缩策略。
-- Reasoning 和 Compaction Item 类型已经预留，但当前不会产生。
+- 上下文采用 Token 估算和可配置总预算，超限时分批压缩较早历史，在空间允许时
+  保留最近完整问答和当前问题。摘要作为 Compaction Item 保存，后续请求恢复最新
+  摘要及未覆盖的历史。原始消息不会删除。
+- 本轮工具交互超限时明确失败，暂不压缩正在执行的工具链。摘要调用使用聊天模型，
+  其用量暂不计入 Turn 的普通对话用量；当前不保存 Reasoning Item。
 - 项目尚未使用 Alembic 跟踪迁移，部署流程需要自行记录已经执行的 SQL 脚本。
 
 ### 项目结构
