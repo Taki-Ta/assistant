@@ -1,0 +1,2 @@
+# Use identical text bytes when checking out on Windows and macOS.
+* text=auto eol=lf

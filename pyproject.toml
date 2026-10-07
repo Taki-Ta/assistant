@@ -21,7 +21,7 @@ dependencies = [
 dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
-    "ruff>=0.16.6",
+    "ruff==0.16.6",
 ]
 
 
@@ -32,6 +32,24 @@ testpaths = ["tests"]
 markers = [
     "network: tests that require network access",
 ]
+
+[tool.ruff]
+# Keep formatter behavior consistent across development environments.
+required-version = "==0.16.6"
+target-version = "py312"
+line-length = 88
+indent-width = 4
+preview = false
+# Format project Python code; leave Markdown examples and source corpora intact.
+include = ["*.py", "*.pyi", "*.pyw"]
+extend-exclude = ["*.md", "evals/*/corpus/**"]
+force-exclude = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+docstring-code-format = false
 
 
 [project.scripts]
