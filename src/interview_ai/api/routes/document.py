@@ -35,8 +35,9 @@ async def get_documents(claims: Claims, db: DatabaseSession) -> list[Document]:
         .where(Document.owner_id == _owner_id(claims))
         .order_by(Document.updated_at.desc())
     )
-    result = await db.scalars(stmt)
-    return list(result.all())
+    items = (await db.scalars(stmt)).all()
+
+    return [item.model_copy(update={"content": item.content[:30]+"..."}) for item in items]
 
 
 @router.post("", response_model=Document, status_code=status.HTTP_201_CREATED)
