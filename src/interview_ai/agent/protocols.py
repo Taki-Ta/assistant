@@ -7,15 +7,6 @@ from .models import AgentEvent, AgentMessage, ToolExecutionResult
 from .runtime import AgentContext, ToolDependencies
 
 
-# 上下文服务，包含上下文管理，上下文压缩等功能
-class ContextService(Protocol):
-    async def compact(self): ...
-
-
-# 工具接口，后续接入mcp
-class ToolProvider(Protocol): ...
-
-
 class AgentTool(Protocol):
     @property
     def name(self) -> str: ...
@@ -33,11 +24,14 @@ class AgentTool(Protocol):
 
 
 class AgentProvider(Protocol):
+    def tool_definitions(self) -> list[FunctionToolParam]: ...
+
     def generate(
         self,
         messages: Sequence[AgentMessage],
         context: AgentContext,
         dependencies: ToolDependencies,
+        instructions: str | None = None,
     ) -> AsyncIterator[AgentEvent]: ...
 
 

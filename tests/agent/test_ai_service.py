@@ -5,6 +5,7 @@ from uuid import UUID
 
 import pytest
 
+from interview_ai.agent.context.budget import ContextBudget, ContextBudgetExceeded
 from interview_ai.agent.models import (
     AgentMessage,
     AssistantMessageEvent,
@@ -15,6 +16,7 @@ from interview_ai.agent.models import (
     ToolExecutionResult,
 )
 from interview_ai.agent.providers.openai import (
+    ModelResponseError,
     OpenAIProvider,
     ToolCallLimitExceeded,
 )
@@ -26,6 +28,97 @@ from interview_ai.indexing.search_service import SearchService
 
 CHUNK_ID = UUID("01900000-0000-7000-8000-000000000001")
 DOCUMENT_ID = UUID("01900000-0000-7000-8000-000000000002")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "response_status, answer",
+    [
+        ("incomplete", "部分回答"),
+        ("failed", ""),
+        ("completed", "  "),
+    ],
+)
+async def test_unfinished_or_empty_response_never_emits_completed(
+    response_status, answer
+):
+    client = AsyncMock()
+    response = _final_response(answer)
+    response.status = response_status
+    client.responses.create.return_value = response
+    provider = OpenAIProvider(client=client, tools=ToolRegistry())
+    context, dependencies = _runtime()
+    events = []
+    with pytest.raises(ModelResponseError):
+        async for event in provider.generate(
+            [AgentMessage(role="user", content="问题")],
+            context,
+            dependencies,
+        ):
+            events.append(event)
+    assert events == []
+
+
+@pytest.mark.asyncio
+async def test_incomplete_summary_is_rejected():
+    client = AsyncMock()
+    client.responses.create.return_value = SimpleNamespace(
+        status="incomplete", output_text="部分摘要"
+    )
+    provider = OpenAIProvider(client=client, tools=ToolRegistry())
+    with pytest.raises(ModelResponseError):
+        await provider.summarize_history(
+            [AgentMessage(role="user", content="历史")], max_output_tokens=100
+        )
+
+
+@pytest.mark.asyncio
+async def test_summary_is_separate_request_without_tools():
+    client = AsyncMock()
+    client.responses.create.return_value = SimpleNamespace(
+        output_text="历史摘要", status="completed"
+    )
+    provider = OpenAIProvider(client=client, tools=ToolRegistry())
+    result = await provider.summarize_history(
+        [AgentMessage(role="user", content="历史问题")],
+        max_output_tokens=100,
+    )
+    assert result == "历史摘要"
+    kwargs = client.responses.create.await_args.kwargs
+    assert "tools" not in kwargs
+    assert kwargs["max_output_tokens"] == 100
+
+
+@pytest.mark.asyncio
+async def test_tool_loop_rejects_overflow_before_second_model_request():
+    client = AsyncMock()
+    client.responses.create.return_value = SimpleNamespace(
+        output=[_function_call()], output_text=""
+    )
+    tool = SimpleNamespace(
+        name="search_knowledge",
+        definition={"type": "function", "name": "search_knowledge"},
+        invoke=AsyncMock(return_value=ToolExecutionResult(output="结果" * 1000)),
+    )
+    provider = OpenAIProvider(
+        client=client,
+        tools=ToolRegistry([tool]),
+        budget=ContextBudget(
+            total_tokens=1000, output_tokens=100, safety_margin_tokens=100
+        ),
+    )
+    context, dependencies = _runtime()
+    with pytest.raises(ContextBudgetExceeded, match="工具结果"):
+        _ = [
+            event
+            async for event in provider.generate(
+                [AgentMessage(role="user", content="查询")],
+                context,
+                dependencies,
+            )
+        ]
+    assert client.responses.create.await_count == 1
+    assert client.responses.create.await_args.kwargs["max_output_tokens"] == 100
 
 
 def _function_call(call_id: str = "call-001") -> SimpleNamespace:
