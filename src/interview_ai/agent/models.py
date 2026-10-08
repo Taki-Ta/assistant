@@ -82,3 +82,20 @@ class AssistantTextDeltaEvent(BaseEvent):
 
 ConversationEvent = AssistantMessageEvent | FunctionCallEvent | FunctionCallOutputEvent
 AgentEvent = ConversationEvent | ModelCompletedEvent | AssistantTextDeltaEvent
+
+
+class ChatStartedEvent(BaseModel):
+    type: Literal["started"] = "started"
+    session_id: UUID
+    turn_id: UUID
+
+
+class ChatCompletedEvent(BaseModel):
+    type: Literal["completed"] = "completed"
+    session_id: UUID
+    turn_id: UUID
+    answer: str
+    retrieved_sources: tuple[RetrievedSource, ...] = ()
+
+
+ChatStreamEvent = ChatStartedEvent | AssistantTextDeltaEvent | ChatCompletedEvent

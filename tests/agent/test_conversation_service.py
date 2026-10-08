@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID
 
 import pytest
+from anyio import CancelScope
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid6 import uuid7
 
@@ -13,6 +14,9 @@ from interview_ai.agent.models import (
     AgentEvent,
     AgentMessage,
     AssistantMessageEvent,
+    AssistantTextDeltaEvent,
+    ChatCompletedEvent,
+    ChatStartedEvent,
     FunctionCallEvent,
     FunctionCallOutputEvent,
     ModelCompletedEvent,
@@ -163,6 +167,7 @@ async def test_chat_passes_completed_message_history_to_provider() -> None:
     )
     assert provider.generate.call_args.kwargs == {
         "instructions": service._context_builder.instructions,
+        "stream": False,
     }
     current_user_item = repository.append_items.await_args_list[0].args[0][0]
     assert current_user_item.text_content == "第二问"
@@ -381,3 +386,149 @@ async def test_compaction_is_saved_before_generation_even_when_generation_fails(
         repository.complete_turn.assert_awaited_once()
     assert db.begin.call_count == 3
     assert repository.append_items.await_args_list[-1].args[0][0].sequence == 2
+
+
+@pytest.mark.asyncio
+async def test_chat_stream_sends_deltas_before_persisting_and_completes_after_commit():
+    service, db, repository, provider = _service()
+    repository.create_session.return_value = Session(id=SESSION_ID, owner_id="user-001")
+    repository.create_turn.return_value = Turn(
+        id=TURN_ID, session_id=SESSION_ID, sequence=0
+    )
+    provider.generate.return_value = _events(
+        FunctionCallOutputEvent(
+            call_id="call-1",
+            tool_name="search",
+            output="[]",
+            succeeded=True,
+            sources=(_source(CHUNK_A, 0.9),),
+        ),
+        AssistantTextDeltaEvent(delta="回答"),
+        AssistantMessageEvent(text="回答"),
+        _completed(),
+    )
+    context, dependencies = _runtime()
+    events = service.chat_stream(None, "问题", context, dependencies)
+    first = await anext(events)
+    assert isinstance(first, ChatStartedEvent)
+    assert first.session_id == SESSION_ID and first.turn_id == TURN_ID
+    provider.generate.assert_not_called()
+    assert repository.append_items.await_count == 1
+    assert db.begin.return_value.__aexit__.await_count == 1
+    delta = await anext(events)
+    assert isinstance(delta, AssistantTextDeltaEvent)
+    repository.complete_turn.assert_not_awaited()
+    final = await anext(events)
+    assert isinstance(final, ChatCompletedEvent)
+    assert final.answer == "回答"
+    assert final.retrieved_sources == (_source(CHUNK_A, 0.9),)
+    repository.complete_turn.assert_awaited_once()
+    assert db.begin.return_value.__aexit__.await_count == 2
+    saved = repository.append_items.await_args_list[-1].args[0]
+    assert [item.item_type for item in saved] == [
+        ItemType.FUNCTION_CALL_OUTPUT,
+        ItemType.MESSAGE,
+    ]
+    assert provider.generate.call_args.kwargs["stream"] is True
+    await events.aclose()
+    repository.fail_turn.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("after_delta", [False, True])
+async def test_closing_chat_stream_marks_failed_and_closes_provider(after_delta):
+    service, _, repository, provider = _service()
+    repository.create_session.return_value = Session(id=SESSION_ID, owner_id="user-001")
+    repository.create_turn.return_value = Turn(
+        id=TURN_ID, session_id=SESSION_ID, sequence=0
+    )
+    closed = False
+
+    async def generate(*args, **kwargs):
+        nonlocal closed
+        try:
+            yield AssistantTextDeltaEvent(delta="部分")
+            await asyncio.Event().wait()
+        finally:
+            closed = True
+
+    provider.generate.side_effect = generate
+    context, dependencies = _runtime()
+    events = service.chat_stream(None, "原始问题", context, dependencies)
+    await anext(events)
+    if after_delta:
+        await anext(events)
+    await events.aclose()
+    assert closed == after_delta
+    repository.fail_turn.assert_awaited_once()
+    assert repository.fail_turn.await_args.kwargs["error_message"] == "请求已取消"
+    assert repository.append_items.await_count == 1
+    repository.complete_turn.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_stream_failure_does_not_save_text_deltas_or_emit_completed():
+    service, _, repository, provider = _service()
+    repository.create_session.return_value = Session(id=SESSION_ID, owner_id="user-001")
+    repository.create_turn.return_value = Turn(
+        id=TURN_ID, session_id=SESSION_ID, sequence=0
+    )
+    provider.generate.return_value = _events(
+        AssistantTextDeltaEvent(delta="部分"), error=RuntimeError("失败")
+    )
+    context, dependencies = _runtime()
+    received = []
+    with pytest.raises(RuntimeError, match="失败"):
+        async for event in service.chat_stream(None, "问题", context, dependencies):
+            received.append(event)
+    assert [type(event) for event in received] == [
+        ChatStartedEvent,
+        AssistantTextDeltaEvent,
+    ]
+    repository.fail_turn.assert_awaited_once()
+    repository.complete_turn.assert_not_awaited()
+    assert repository.append_items.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_stream_cleanup_is_shielded_from_cancel_scope():
+    service, _, repository, _ = _service()
+    repository.create_session.return_value = Session(id=SESSION_ID, owner_id="user-001")
+    repository.create_turn.return_value = Turn(
+        id=TURN_ID, session_id=SESSION_ID, sequence=0
+    )
+    cleaned = False
+
+    async def fail_turn(*args, **kwargs):
+        nonlocal cleaned
+        await asyncio.sleep(0)
+        cleaned = True
+
+    repository.fail_turn.side_effect = fail_turn
+    context, dependencies = _runtime()
+    events = service.chat_stream(None, "问题", context, dependencies)
+    await anext(events)
+    with CancelScope() as scope:
+        scope.cancel()
+        await events.aclose()
+    assert cleaned
+
+
+@pytest.mark.asyncio
+async def test_stream_does_not_emit_completed_when_persistence_fails():
+    service, _, repository, provider = _service()
+    repository.create_session.return_value = Session(id=SESSION_ID, owner_id="user-001")
+    repository.create_turn.return_value = Turn(
+        id=TURN_ID, session_id=SESSION_ID, sequence=0
+    )
+    provider.generate.return_value = _events(
+        AssistantMessageEvent(text="回答"), _completed()
+    )
+    repository.complete_turn.side_effect = RuntimeError("入库失败")
+    context, dependencies = _runtime()
+    received = []
+    with pytest.raises(RuntimeError, match="入库失败"):
+        async for event in service.chat_stream(None, "问题", context, dependencies):
+            received.append(event)
+    assert [type(event) for event in received] == [ChatStartedEvent]
+    repository.fail_turn.assert_awaited_once()

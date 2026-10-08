@@ -1,7 +1,10 @@
 from asyncio import CancelledError
+from collections.abc import AsyncGenerator
+from contextlib import aclosing
 from dataclasses import dataclass
 from uuid import UUID
 
+from anyio import CancelScope
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from interview_ai.agent.context.builder import ContextBuilder
@@ -9,6 +12,10 @@ from interview_ai.agent.models import (
     AgentMessage,
     AgentResult,
     AssistantMessageEvent,
+    AssistantTextDeltaEvent,
+    ChatCompletedEvent,
+    ChatStartedEvent,
+    ChatStreamEvent,
     ConversationEvent,
     FunctionCallEvent,
     FunctionCallOutputEvent,
@@ -39,6 +46,39 @@ class ConversationService:
         context: AgentContext,
         dependencies: ToolDependencies,
     ) -> AgentResult:
+        async with aclosing(
+            self._chat_events(session_id, message, context, dependencies, stream=False)
+        ) as events:
+            async for event in events:
+                if isinstance(event, ChatCompletedEvent):
+                    result = AgentResult(
+                        session_id=event.session_id,
+                        answer=event.answer,
+                        retrieved_sources=event.retrieved_sources,
+                    )
+                    return result
+        raise RuntimeError("会话未正常完成")
+
+    def chat_stream(
+        self,
+        session_id: UUID | None,
+        message: str,
+        context: AgentContext,
+        dependencies: ToolDependencies,
+    ) -> AsyncGenerator[ChatStreamEvent, None]:
+        return self._chat_events(
+            session_id, message, context, dependencies, stream=True
+        )
+
+    async def _chat_events(
+        self,
+        session_id: UUID | None,
+        message: str,
+        context: AgentContext,
+        dependencies: ToolDependencies,
+        *,
+        stream: bool,
+    ) -> AsyncGenerator[ChatStreamEvent, None]:
         current_message = AgentMessage(role="user", content=message)
 
         async with self._db.begin():
@@ -72,6 +112,7 @@ class ConversationService:
 
         # 回滚会使 ORM 属性过期，收尾时使用已保存的 ID，避免隐式数据库读取。
         turn_id = turn.id
+        session_id = session.id
         conversation_events: list[ConversationEvent] = []
         retrieved_sources: dict[UUID, RetrievedSource] = {}
         answer: str | None = None
@@ -79,6 +120,7 @@ class ConversationService:
         first_event_sequence = 1
 
         try:
+            yield ChatStartedEvent(session_id=session_id, turn_id=turn_id)
             built_context = await self._context_builder.build(
                 message, history_items, self._provider.tool_definitions()
             )
@@ -104,22 +146,30 @@ class ConversationService:
                         ]
                     )
                 first_event_sequence = 2
-            async for event in self._provider.generate(
+            provider_events = self._provider.generate(
                 built_context.messages,
                 context,
                 dependencies,
                 instructions=built_context.instructions,
-            ):
-                if isinstance(event, ModelCompletedEvent):
-                    completed = event
-                    continue
+                stream=stream,
+            )
+            try:
+                async for event in provider_events:
+                    if isinstance(event, AssistantTextDeltaEvent):
+                        yield event
+                        continue
+                    if isinstance(event, ModelCompletedEvent):
+                        completed = event
+                        continue
 
-                conversation_events.append(event)
-
-                if isinstance(event, AssistantMessageEvent):
-                    answer = event.text
-                elif isinstance(event, FunctionCallOutputEvent) and event.succeeded:
-                    _merge_sources(retrieved_sources, event.sources)
+                    conversation_events.append(event)
+                    if isinstance(event, AssistantMessageEvent):
+                        answer = event.text
+                    elif isinstance(event, FunctionCallOutputEvent) and event.succeeded:
+                        _merge_sources(retrieved_sources, event.sources)
+            finally:
+                with CancelScope(shield=True):
+                    await provider_events.aclose()
 
             if answer is None or completed is None:
                 raise RuntimeError("模型响应未正常完成")
@@ -138,19 +188,22 @@ class ConversationService:
                     total_tokens=completed.total_tokens,
                     completed_at=utc_now(),
                 )
-        except (Exception, CancelledError) as exc:
+        except (Exception, CancelledError, GeneratorExit) as exc:
             # 取消同样需要收尾；事务退出后保存，再继续向外传播取消。
-            async with self._db.begin():
-                await self._append_events(
-                    turn_id, conversation_events, first_event_sequence
-                )
-                await self._repository.fail_turn(
-                    turn,
-                    error_message=(
-                        "请求已取消" if isinstance(exc, CancelledError) else str(exc)
-                    ),
-                    completed_at=utc_now(),
-                )
+            with CancelScope(shield=True):
+                async with self._db.begin():
+                    await self._append_events(
+                        turn_id, conversation_events, first_event_sequence
+                    )
+                    await self._repository.fail_turn(
+                        turn,
+                        error_message=(
+                            "请求已取消"
+                            if isinstance(exc, (CancelledError, GeneratorExit))
+                            else str(exc)
+                        ),
+                        completed_at=utc_now(),
+                    )
             raise
 
         sources = tuple(
@@ -160,8 +213,9 @@ class ConversationService:
                 reverse=True,
             )
         )
-        return AgentResult(
-            session_id=session.id,
+        yield ChatCompletedEvent(
+            session_id=session_id,
+            turn_id=turn_id,
             answer=answer,
             retrieved_sources=sources,
         )
