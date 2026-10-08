@@ -83,9 +83,9 @@ class ContextBuilder:
         budget = self.budget or ContextBudget.configured()
         estimated_tokens = estimate_request(self.instructions, input_messages, tools)
         compaction = None
-        if estimated_tokens > budget.input_tokens:
+        if estimated_tokens > budget.initial_input_tokens:
             fixed_tokens = estimate_request(self.instructions, [current_message], tools)
-            if fixed_tokens > budget.input_tokens:
+            if fixed_tokens > budget.initial_input_tokens:
                 raise InputTooLarge("系统规则、工具定义和当前问题超过输入预算")
             input_messages, compaction = await self._compact(
                 messages, current_message, tools, budget
@@ -93,7 +93,7 @@ class ContextBuilder:
             estimated_tokens = estimate_request(
                 self.instructions, input_messages, tools
             )
-            if estimated_tokens > budget.input_tokens:
+            if estimated_tokens > budget.initial_input_tokens:
                 raise ContextBudgetExceeded("历史压缩后仍超过输入预算")
         return BuiltContext(
             instructions=self.instructions,
@@ -124,7 +124,7 @@ class ContextBuilder:
                 groups.append([])
                 turn_ids.append(item.turn_id)
             groups[-1].append(_to_agent_message(item))
-        available = budget.input_tokens - estimate_request(
+        available = budget.initial_input_tokens - estimate_request(
             self.instructions, [current_message], tools
         )
         summary_tokens = min(2048, available // 4)

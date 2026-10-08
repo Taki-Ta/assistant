@@ -1,11 +1,13 @@
 import json
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import ANY, AsyncMock
 from uuid import UUID
 
 import pytest
 
 from interview_ai.agent.context.budget import ContextBudget, ContextBudgetExceeded
+from interview_ai.agent.context.estimator import estimate_request
+from interview_ai.agent.context.tool_output import ToolOutputBudget
 from interview_ai.agent.models import (
     AgentMessage,
     AssistantMessageEvent,
@@ -209,7 +211,9 @@ async def test_generate_executes_tool_and_returns_final_answer() -> None:
     assert client.responses.create.await_args_list[0].kwargs["input"] == [
         {"role": "user", "content": "Python 是什么？"}
     ]
-    tool.invoke.assert_awaited_once_with('{"query":"Python"}', context, dependencies)
+    tool.invoke.assert_awaited_once_with(
+        '{"query":"Python"}', context, dependencies, output_budget=ANY
+    )
     second_input = client.responses.create.await_args_list[1].kwargs["input"]
     tool_outputs = [
         item
@@ -445,3 +449,137 @@ async def test_search_knowledge_returns_output_and_retrieved_sources() -> None:
         }
     ]
     assert result.sources == (_source(),)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("parallel", [False, True])
+async def test_bounded_search_results_allow_multiple_calls_to_finish(parallel):
+    client = AsyncMock()
+    calls = [_function_call("first"), _function_call("second")]
+    responses = (
+        [SimpleNamespace(output=calls, output_text="")]
+        if parallel
+        else [SimpleNamespace(output=[call], output_text="") for call in calls]
+    )
+    client.responses.create.side_effect = [*responses, _final_response("完成")]
+    budget = ContextBudget(
+        total_tokens=8000,
+        output_tokens=800,
+        safety_margin_tokens=400,
+        tool_output_tokens=2000,
+    )
+    provider = OpenAIProvider(
+        client=client, tools=ToolRegistry([SearchKnowledgeTool()]), budget=budget
+    )
+    context, dependencies = _runtime()
+    dependencies.search_service.search.return_value = [
+        SearchResult(
+            chunk_id=CHUNK_ID,
+            content='资料"\n' * 5000,
+            score=0.9,
+            document_name="知识库",
+            start_line=1,
+            end_line=5000,
+        )
+    ]
+    messages = [AgentMessage(role="user", content="问题" * 1800)]
+    events = [
+        event async for event in provider.generate(messages, context, dependencies)
+    ]
+    outputs = [event for event in events if isinstance(event, FunctionCallOutputEvent)]
+    assert len(outputs) == 2
+    assert events[-2].text == "完成"
+    for event in outputs:
+        payload = json.loads(event.output)
+        assert payload["truncated"] is True
+        assert payload["results"][0]["content"] == event.sources[0].content
+        assert event.sources[0].end_line is None
+        assert len(event.sources[0].content) < len(
+            dependencies.search_service.search.return_value[0].content
+        )
+    for call in client.responses.create.await_args_list:
+        kwargs = call.kwargs
+        assert (
+            estimate_request(kwargs["instructions"], kwargs["input"], kwargs["tools"])
+            <= budget.input_tokens
+        )
+    final_input = client.responses.create.await_args.kwargs["input"]
+    sent_outputs = [
+        item
+        for item in final_input
+        if isinstance(item, dict) and item.get("type") == "function_call_output"
+    ]
+    assert [item["call_id"] for item in sent_outputs] == ["first", "second"]
+    assert [item["output"] for item in sent_outputs] == [
+        event.output for event in outputs
+    ]
+    assert (
+        estimate_request(None, final_input, provider.tool_definitions())
+        > budget.initial_input_tokens
+    )
+
+
+@pytest.mark.asyncio
+async def test_search_budget_keeps_complete_highest_ranked_source():
+    context, dependencies = _runtime()
+    dependencies.search_service.search.return_value = [
+        SearchResult(chunk_id=DOCUMENT_ID, content="低相关内容" * 30, score=0.2),
+        SearchResult(chunk_id=CHUNK_ID, content="高相关内容" * 30, score=0.9),
+    ]
+    output_budget = ToolOutputBudget(350, "search")
+    result = await SearchKnowledgeTool().invoke(
+        '{"query":"Python"}', context, dependencies, output_budget=output_budget
+    )
+    assert output_budget.fits(result.output)
+    assert [source.chunk_id for source in result.sources] == [CHUNK_ID]
+    assert result.sources[0].content == "高相关内容" * 30
+    payload = json.loads(result.output)
+    assert payload["truncated"] is True
+    assert [item["chunk_id"] for item in payload["results"]] == [str(CHUNK_ID)]
+
+
+@pytest.mark.asyncio
+async def test_search_does_not_report_no_hits_when_metadata_cannot_fit():
+    context, dependencies = _runtime()
+    dependencies.search_service.search.return_value = [
+        SearchResult(
+            chunk_id=CHUNK_ID, content="资料", score=0.9, document_name="标题" * 1000
+        )
+    ]
+    with pytest.raises(ContextBudgetExceeded, match="有效检索片段"):
+        await SearchKnowledgeTool().invoke(
+            '{"query":"Python"}',
+            context,
+            dependencies,
+            output_budget=ToolOutputBudget(100, "search"),
+        )
+
+
+@pytest.mark.asyncio
+async def test_tool_calls_fail_before_execution_when_minimum_outputs_cannot_fit():
+    client = AsyncMock()
+    client.responses.create.return_value = SimpleNamespace(
+        output=[_function_call("x" * 1000)], output_text=""
+    )
+    tool = SimpleNamespace(
+        name="search_knowledge",
+        definition={"name": "search_knowledge"},
+        invoke=AsyncMock(),
+    )
+    provider = OpenAIProvider(
+        client=client,
+        tools=ToolRegistry([tool]),
+        budget=ContextBudget(
+            total_tokens=600, output_tokens=100, safety_margin_tokens=50
+        ),
+    )
+    context, dependencies = _runtime()
+    with pytest.raises(ContextBudgetExceeded, match="工具结果"):
+        _ = [
+            event
+            async for event in provider.generate(
+                [AgentMessage(role="user", content="检索")], context, dependencies
+            )
+        ]
+    tool.invoke.assert_not_awaited()
+    assert client.responses.create.await_count == 1

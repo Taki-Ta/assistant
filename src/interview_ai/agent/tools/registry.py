@@ -2,6 +2,7 @@ from collections.abc import Iterable
 
 from openai.types.responses.function_tool_param import FunctionToolParam
 
+from ..context.tool_output import ToolOutputBudget
 from ..models import ToolExecutionResult
 from ..protocols import AgentTool
 from ..runtime import AgentContext, ToolDependencies
@@ -29,9 +30,13 @@ class ToolRegistry:
         arguments: str,
         context: AgentContext,
         dependencies: ToolDependencies,
+        *,
+        output_budget: ToolOutputBudget | None = None,
     ) -> ToolExecutionResult:
         tool = self.tools.get(name)
 
         if tool is None:
             raise LookupError(f"未知工具：{name}")
-        return await tool.invoke(arguments, context, dependencies)
+        return await tool.invoke(
+            arguments, context, dependencies, output_budget=output_budget
+        )

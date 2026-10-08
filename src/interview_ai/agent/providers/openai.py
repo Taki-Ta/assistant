@@ -11,6 +11,10 @@ from openai.types.responses.function_tool_param import FunctionToolParam
 from interview_ai.agent.context.budget import ContextBudget, ContextBudgetExceeded
 from interview_ai.agent.context.compactor import COMPACTION_INSTRUCTIONS
 from interview_ai.agent.context.estimator import estimate_request
+from interview_ai.agent.context.tool_output import (
+    DEFAULT_MAX_TOOL_RESULT_TOKENS,
+    ToolOutputBudget,
+)
 from interview_ai.agent.tools.registry import ToolRegistry
 from interview_ai.config import config
 
@@ -156,13 +160,10 @@ class OpenAIProvider:
             _validate_completion(response)
             input_items.extend(response.output)  # type: ignore[arg-type]
 
-            has_tool_call = False
+            calls = [item for item in response.output if item.type == "function_call"]
+            minimum_error = '{"error":"tool_output_budget_exceeded"}'
 
-            for item in response.output:
-                if item.type != "function_call":
-                    continue
-
-                has_tool_call = True
+            for index, item in enumerate(calls):
                 tool_call_count += 1
                 if tool_call_count > self._max_tool_calls:
                     raise ToolCallLimitExceeded(
@@ -177,14 +178,43 @@ class OpenAIProvider:
                     tool_name=item.name,
                 )
 
+                remaining_tokens = self._budget.input_tokens - estimate_request(
+                    instructions, input_items, tools
+                )
+                # 同批调用各保留一个有效结果的最小空间，额外容量均分。
+                minimum_sizes = [
+                    estimate_request(
+                        None, [ToolOutputBudget(0, call.call_id).item(minimum_error)]
+                    )
+                    for call in calls[index:]
+                ]
+                extra_tokens = remaining_tokens - sum(minimum_sizes)
+                if extra_tokens < 0:
+                    raise ContextBudgetExceeded("剩余预算不足以容纳工具结果")
+                output_budget = ToolOutputBudget(
+                    min(
+                        minimum_sizes[0] + extra_tokens // len(minimum_sizes),
+                        max(
+                            minimum_sizes[0],
+                            min(
+                                DEFAULT_MAX_TOOL_RESULT_TOKENS,
+                                self._budget.input_tokens // 8,
+                            ),
+                        ),
+                    ),
+                    item.call_id,
+                )
                 try:
                     result = await self._tools.invoke(
                         item.name,
                         item.arguments,
                         context,
                         dependencies,
+                        output_budget=output_budget,
                     )
                     tool_succeeded = True
+                except ContextBudgetExceeded:
+                    raise
                 except Exception:
                     logger.exception("工具执行失败：%s", item.name)
                     result = ToolExecutionResult(
@@ -199,15 +229,15 @@ class OpenAIProvider:
                         ),
                         (),
                     )
+                    if not output_budget.fits(result.output):
+                        result = ToolExecutionResult(
+                            '{"error":"tool_execution_failed"}'
+                        )
                     tool_succeeded = False
 
-                input_items.append(
-                    {
-                        "type": "function_call_output",
-                        "call_id": item.call_id,
-                        "output": result.output,
-                    }
-                )
+                if not output_budget.fits(result.output):
+                    raise ContextBudgetExceeded("工具结果超过分配的输入预算")
+                input_items.append(output_budget.item(result.output))
                 yield FunctionCallOutputEvent(
                     provider_response_id=getattr(response, "id", None),
                     call_id=item.call_id,
@@ -217,7 +247,7 @@ class OpenAIProvider:
                     sources=result.sources,
                 )
 
-            if not has_tool_call:
+            if not calls:
                 if not response.output_text.strip():
                     raise ModelResponseError("模型未返回有效回答")
                 message_item = next(

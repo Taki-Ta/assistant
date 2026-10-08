@@ -4,6 +4,7 @@ from interview_ai.config import config
 
 DEFAULT_SAFETY_MARGIN_TOKENS = 4096
 DEFAULT_MAX_OUTPUT_TOKENS = 8192
+DEFAULT_MAX_TOOL_RESERVE_TOKENS = 8192
 
 
 class ContextBudgetExceeded(ValueError):
@@ -23,6 +24,8 @@ class ContextBudget:
     total_tokens: int
     output_tokens: int | None = None
     safety_margin_tokens: int | None = None
+    # 初始上下文为后续工具交互预留的空间，不是单次结果的硬上限。
+    tool_output_tokens: int | None = None
 
     def __post_init__(self) -> None:
         if self.total_tokens <= 0:
@@ -39,14 +42,29 @@ class ContextBudget:
                 "safety_margin_tokens",
                 min(DEFAULT_SAFETY_MARGIN_TOKENS, self.total_tokens // 8),
             )
-        if self.output_tokens <= 0 or self.safety_margin_tokens < 0:
-            raise ValueError("输出预算必须为正数，安全余量不能为负数")
-        if self.input_tokens <= 0:
-            raise ValueError("模型上下文总预算不足以容纳输出预留和安全余量")
+        if self.tool_output_tokens is None:
+            object.__setattr__(
+                self,
+                "tool_output_tokens",
+                min(DEFAULT_MAX_TOOL_RESERVE_TOKENS, self.total_tokens // 8),
+            )
+        if (
+            self.output_tokens <= 0
+            or self.safety_margin_tokens < 0
+            or self.tool_output_tokens < 0
+        ):
+            raise ValueError("输出预算必须为正数，安全余量和工具预留不能为负数")
+        if self.initial_input_tokens <= 0:
+            raise ValueError("模型上下文总预算不足以容纳输出预留、安全余量和工具预留")
 
     @property
     def input_tokens(self) -> int:
         return self.total_tokens - self.output_tokens - self.safety_margin_tokens
+
+    @property
+    def initial_input_tokens(self) -> int:
+        """初始上下文上限；工具预留可在后续模型请求中使用。"""
+        return self.input_tokens - self.tool_output_tokens
 
     @classmethod
     def configured(cls) -> "ContextBudget":

@@ -3,6 +3,7 @@ from typing import Protocol
 
 from openai.types.responses.function_tool_param import FunctionToolParam
 
+from .context.tool_output import ToolOutputBudget
 from .models import AgentEvent, AgentMessage, ToolExecutionResult
 from .runtime import AgentContext, ToolDependencies
 
@@ -17,7 +18,12 @@ class AgentTool(Protocol):
         ...
 
     async def invoke(
-        self, arguments: str, context: AgentContext, dependencies: ToolDependencies
+        self,
+        arguments: str,
+        context: AgentContext,
+        dependencies: ToolDependencies,
+        *,
+        output_budget: ToolOutputBudget | None = None,
     ) -> ToolExecutionResult:
         """执行模型发起的工具调用，返回 JSON 字符串。"""
         ...

@@ -31,12 +31,27 @@ def test_text_estimate_handles_empty_ascii_chinese_and_mixed_text():
 def test_default_reservations_scale_with_budget(total):
     budget = ContextBudget(total_tokens=total)
     assert budget.input_tokens > 0
+    assert budget.initial_input_tokens > 0
     assert budget.output_tokens <= total // 4
     assert budget.safety_margin_tokens <= total // 8
     assert (
         budget.input_tokens + budget.output_tokens + budget.safety_margin_tokens
         == total
     )
+    assert (
+        budget.initial_input_tokens + budget.tool_output_tokens == budget.input_tokens
+    )
+
+
+@pytest.mark.parametrize("reserve", [-1, 800])
+def test_invalid_tool_reservations_are_rejected(reserve):
+    with pytest.raises(ValueError):
+        ContextBudget(
+            total_tokens=1000,
+            output_tokens=100,
+            safety_margin_tokens=100,
+            tool_output_tokens=reserve,
+        )
 
 
 def test_explicit_invalid_reservations_are_rejected():
@@ -231,3 +246,39 @@ async def test_existing_checkpoint_is_merged_with_new_history():
         summarizer.summarize_history.await_args_list[0].args[0][0].content
         == "已有历史摘要"
     )
+
+
+@pytest.mark.asyncio
+async def test_builder_compacts_history_to_leave_tool_capacity():
+    budget = ContextBudget(
+        total_tokens=1200,
+        output_tokens=100,
+        safety_margin_tokens=100,
+        tool_output_tokens=250,
+    )
+    history = [
+        ConversationItem(
+            turn_id=uuid7(),
+            sequence=0,
+            item_type=ItemType.MESSAGE,
+            role=ItemRole.USER,
+            text_content="历史" * 400,
+        )
+    ]
+    messages = [
+        AgentMessage(role="user", content=history[0].text_content),
+        AgentMessage(role="user", content="继续"),
+    ]
+    original_size = estimate_request("规则", messages)
+    assert budget.initial_input_tokens < original_size <= budget.input_tokens
+    summarizer = SimpleNamespace(
+        summarize_history=AsyncMock(return_value="较早问题摘要")
+    )
+    built = await ContextBuilder(
+        instructions="规则",
+        summarizer=summarizer,
+        budget=budget,
+    ).build("继续", history)
+    assert built.compaction is not None
+    assert built.estimated_input_tokens <= budget.initial_input_tokens
+    assert built.messages[-1].content == "继续"
