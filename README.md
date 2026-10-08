@@ -15,8 +15,10 @@ retrieval evaluation, and persistent multi-turn conversations.
 - Generate embeddings in batches and store vectors in PostgreSQL/pgvector.
 - Filter documents and search results by the authenticated user.
 - Run a Responses API tool loop backed by the local knowledge search tool.
-- Persist sessions, turns, messages, function calls, and function outputs.
-- Restore completed user/assistant messages when continuing a session.
+- Persist sessions, turns, messages, tool events, and history summaries.
+- Build budgeted context and summarize older history while retaining recent turns.
+- Restore the latest summary, uncovered completed messages, and failed user requests.
+- Stream answer text, tool calls, and tool results over SSE with idle heartbeats.
 - Return the union of all sources retrieved during a turn, deduplicated by
   chunk ID and ordered by score.
 - Evaluate retrieval quality with Hit@K, MRR, Recall, and latency metrics.
@@ -30,6 +32,7 @@ FastAPI
 │                                └── PostgreSQL / pgvector
 ├── Search API ──── SearchService ── Embedding API + pgvector
 └── Chat API ────── ConversationService
+                    ├── ContextBuilder ── token estimation / history compaction
                     ├── ConversationRepository ── conversation database session
                     └── OpenAIProvider
                         └── ToolRegistry ── SearchService ── search database session
@@ -45,7 +48,7 @@ transactions, while turn creation and completion use short transactions.
 - [uv](https://docs.astral.sh/uv/)
 - PostgreSQL with the pgvector extension
 - An OpenAI-compatible Embedding API
-- An OpenAI-compatible Responses API with function calling
+- An OpenAI-compatible Responses API with function calling and streaming support
 
 ### Quick start
 
@@ -75,6 +78,8 @@ EMBEDDING_BATCH_SIZE=20
 CHAT_API_KEY=your-chat-api-key
 CHAT_API_HOST=https://your-chat-endpoint/v1
 CHAT_MODEL=your-chat-model
+CHAT_CONTEXT_WINDOW=32768
+CHAT_CONTEXT_BUDGET=32768
 MAX_TOOL_CALLS=8
 
 DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/interview_ai
@@ -88,6 +93,13 @@ IS_DEBUG=true
 
 The embedding dimension must match the `VECTOR` dimension in the database
 schema. The current schema uses 1536 dimensions.
+
+Set `CHAT_CONTEXT_WINDOW` to the model's supported context length in tokens, and
+`CHAT_CONTEXT_BUDGET` to the total per-request budget, at most that length. Both
+currently default to 32768; reduce both if your model has a smaller window.
+Output, safety margin, and tool reserve are calculated in code. At the default
+budget they occupy 8192, 4096, and 4096 tokens, leaving 16384 for initial input.
+Token counts are estimates, not model-specific tokenizer measurements.
 
 4. Initialize a new database:
 
@@ -164,12 +176,6 @@ curl -X POST http://127.0.0.1:8000/api/v1/chat \
   -d '{"message":"Explain RAG using my knowledge base."}'
 ```
 
-For streaming, use the same request body and authorization header at
-`/api/v1/chat/stream`. Add `-N` to curl to disable output buffering. Browser clients
-should use `fetch()` with POST and parse SSE frames separated by a blank line;
-network read chunks do not necessarily match event boundaries. Deltas are not
-stored individually; completed messages and tool events are persisted.
-
 The chat response contains a new `session_id`. Send it with the next message to
 continue the conversation:
 
@@ -204,6 +210,44 @@ Example response:
 `retrieved_sources` is the deduplicated union of successful retrievals made in
 the current turn. It describes what the model could use; it does not claim that
 every returned chunk was explicitly cited in the final answer.
+
+### Streaming chat
+
+Use the same request body and authorization header as the JSON chat endpoint.
+Add `session_id` when continuing an existing conversation:
+
+```bash
+curl -N -X POST http://127.0.0.1:8000/api/v1/chat/stream \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Accept: text/event-stream" \
+  -d '{"message":"Explain RAG using my knowledge base."}'
+```
+
+| SSE event | Main fields and meaning |
+|---|---|
+| `started` | `session_id`, `turn_id`: the turn has been created |
+| `text_delta` | `delta`, `provider_item_id`, `provider_response_id`: incremental text |
+| `function_call` | `call_id`, `tool_name`, `arguments`: a tool invocation |
+| `function_call_output` | `call_id`, `tool_name`, `output`, `succeeded`, `sources`: tool result |
+| `completed` | `session_id`, `turn_id`, `answer`, `retrieved_sources`: committed final result |
+| `error` | `code`, `message`, `session_id`, `turn_id`: stream failure |
+
+Tool events and text can repeat across model rounds. Pair tool events by `call_id`
+and group text by provider IDs. Use `completed.answer` as the final answer;
+`completed` is sent after the database commit. Individual text deltas are not
+persisted. An idle stream sends a comment heartbeat (`: ping`) every 15 seconds.
+
+Browser clients should POST with `fetch()`, decode UTF-8 incrementally, and buffer
+until a blank line completes an SSE frame. Network chunks are not event boundaries;
+ignore comment heartbeats. Abort the fetch with `AbortController.abort()` to stop
+generation. Disconnections close the upstream stream and mark unfinished turns
+failed; this does not guarantee that the remote provider stops computation or billing.
+There is no separate cancel API or resumable stream.
+
+Errors before streaming starts use normal HTTP responses. Errors after `started`
+use an SSE `error` event while HTTP status remains 200. A stream ending without
+`completed` must not be treated as a successful turn.
 
 ### CLI
 
@@ -244,15 +288,9 @@ Tests marked `network` require configured external services.
 
 ### Current limitations
 
-- `/chat` returns a complete JSON response; `/chat/stream` uses SSE events:
-  `started`, `text_delta`, `completed`, and `error`. `started` includes the session
-  and turn IDs. Text deltas carry `provider_item_id` and `provider_response_id` to
-  distinguish messages across tool rounds. Use the final `completed.answer` as
-  the authoritative answer; `completed` is sent only after database commit.
-  Stream errors after `started` use an `error` event, retaining HTTP status 200.
-  Disconnections close the upstream stream and mark unfinished turns as failed.
-- Conversation recovery replays completed user and assistant messages, but not
-  previous tool traces.
+- Streaming requires provider and proxy support; there is no resumable stream or separate cancel API.
+- Conversation recovery uses the latest summary, uncovered completed messages,
+  and failed user requests. It does not replay old tool traces or other sessions.
 - Context uses approximate token counts and a configurable total budget. Older
   history is summarized in bounded batches; recent turns and the current question
   are retained when space permits. Checkpoints persist as compaction items, and
@@ -262,10 +300,16 @@ Tests marked `network` require configured external services.
   when possible and truncating a single oversized chunk when necessary. Sources
   match the content sent to the model; active tool traces are not compressed.
   Requests still fail if even a minimal useful result cannot fit.
-  Summary calls use the chat model but are not included in the Turn's chat usage
+  Summary calls and failed model requests are not fully included in Turn usage
   totals. Reasoning items are not currently persisted.
 - Migration execution is not tracked by Alembic; deployments must track applied
   SQL scripts.
+
+### Documentation
+
+See [Technology stack and dependency usage](docs/技术栈与依赖使用说明.md) (Chinese)
+for context budgets, compaction, tool result limits, SSE, cancellation, database
+transactions, and code navigation.
 
 ### Project layout
 
@@ -299,8 +343,10 @@ FastAPI、兼容 OpenAI 的 Embedding 与 Responses API、PostgreSQL 和 pgvecto
 - 分批生成 Embedding，并将向量保存到 PostgreSQL/pgvector。
 - 根据 JWT 用户身份隔离文档、检索结果和会话。
 - 通过本地知识检索工具执行 Responses API 工具调用循环。
-- 持久化 Session、Turn、消息、函数调用和函数调用结果。
-- 继续会话时恢复此前已完成 Turn 的用户和助手消息。
+- 持久化 Session、Turn、消息、工具事件和历史摘要。
+- 按预算构建上下文，压缩较早历史并尽量保留最近完整轮次。
+- 继续会话时恢复最新摘要、未覆盖的已完成消息和失败轮次的用户请求。
+- 通过 SSE 流式返回回答、工具调用与工具结果，空闲时发送心跳。
 - 返回一个 Turn 内全部检索结果的并集，按 Chunk ID 去重并按分数排序。
 - 使用 Hit@K、MRR、Recall 和延迟指标评估检索质量。
 - 通过 CLI 只读预览 Markdown 索引变更。
@@ -313,6 +359,7 @@ FastAPI
 │                              └── PostgreSQL / pgvector
 ├── 检索 API ── SearchService ── Embedding API + pgvector
 └── 对话 API ── ConversationService
+                ├── ContextBuilder ── Token 估算 / 历史压缩
                 ├── ConversationRepository ── 会话数据库 Session
                 └── OpenAIProvider
                     └── ToolRegistry ── SearchService ── 检索数据库 Session
@@ -327,7 +374,7 @@ FastAPI
 - [uv](https://docs.astral.sh/uv/)
 - 安装 pgvector 扩展的 PostgreSQL
 - 兼容 OpenAI 的 Embedding API
-- 支持函数调用的 OpenAI 兼容 Responses API
+- 支持函数调用与流式响应的 OpenAI 兼容 Responses API
 
 ### 快速开始
 
@@ -357,6 +404,8 @@ EMBEDDING_BATCH_SIZE=20
 CHAT_API_KEY=你的-Chat-API-Key
 CHAT_API_HOST=https://你的-Chat-服务地址/v1
 CHAT_MODEL=你的-Chat-模型
+CHAT_CONTEXT_WINDOW=32768
+CHAT_CONTEXT_BUDGET=32768
 MAX_TOOL_CALLS=8
 
 DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/interview_ai
@@ -369,6 +418,11 @@ IS_DEBUG=true
 ```
 
 Embedding 维度必须与数据库的 `VECTOR` 维度一致，当前表结构使用 1536 维。
+
+`CHAT_CONTEXT_WINDOW` 填写模型支持的最大上下文 Token 数，`CHAT_CONTEXT_BUDGET`
+是每次模型请求使用的总预算，不能超过前者。两项默认均为 32768，模型窗口较小时
+需要一起调小。输出、安全余量和工具预留由代码自动计算；默认分别为 8192、4096、
+4096 Token，首次输入可用 16384 Token。当前采用估算，不是模型专用 tokenizer 的精确计数。
 
 4. 初始化新数据库：
 
@@ -475,6 +529,39 @@ curl -X POST http://127.0.0.1:8000/api/v1/chat \
 `retrieved_sources` 是当前 Turn 内所有成功检索结果去重后的并集，表示模型可以使用的
 资料，并不代表最终回答明确引用了其中每一个 Chunk。
 
+### 流式回答
+
+请求体和认证方式与普通聊天接口一致，继续会话时携带 `session_id`：
+
+```bash
+curl -N -X POST http://127.0.0.1:8000/api/v1/chat/stream \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Accept: text/event-stream" \
+  -d '{"message":"根据我的知识库解释 RAG。"}'
+```
+
+| SSE 事件 | 主要字段与含义 |
+|---|---|
+| `started` | `session_id`、`turn_id`：轮次已创建 |
+| `text_delta` | `delta`、`provider_item_id`、`provider_response_id`：文本增量 |
+| `function_call` | `call_id`、`tool_name`、`arguments`：工具调用 |
+| `function_call_output` | `call_id`、`tool_name`、`output`、`succeeded`、`sources`：工具结果 |
+| `completed` | `session_id`、`turn_id`、`answer`、`retrieved_sources`：已提交的最终结果 |
+| `error` | `code`、`message`、`session_id`、`turn_id`：流内错误 |
+
+工具事件和文本可能在多次模型请求中重复出现。通过 `call_id` 配对工具调用与结果，
+通过 Provider ID 区分文本消息，最终以 `completed.answer` 为准。完成事件只在数据库
+提交后发送，文本增量不单独入库。空闲时每 15 秒发送注释心跳 `: ping`。
+
+浏览器使用 `fetch()` 发起 POST，增量解码 UTF-8，并缓存到空行后再解析完整 SSE 事件。
+网络分块不等于事件边界，注释心跳可以忽略。停止生成时调用 `AbortController.abort()`
+断开请求；服务端关闭上游流并将未完成轮次标记失败，但不能保证远端模型立即停止计算
+或计费。目前没有独立取消接口或断线续传。
+
+流式响应开始前的错误使用普通 HTTP 错误响应；`started` 之后的错误通过 SSE `error`
+表达，此时 HTTP 状态仍为 200。连接结束但没有收到 `completed` 时，不能视为成功。
+
 ### CLI
 
 扫描 Markdown 文件：
@@ -512,21 +599,22 @@ uv run ruff format --check src tests
 
 ### 当前限制
 
-- `/chat` 返回完整 JSON；`/chat/stream` 使用 SSE，依次返回 `started`、
-  `text_delta` 和 `completed`，失败时返回 `error`。开始事件包含会话与轮次 ID，
-  增量中的 `provider_item_id` 和 `provider_response_id` 用于区分多次工具交互中的
-  消息。最终以 `completed.answer` 为准，完成事件只在数据库提交后发送。
-  开始事件之后的失败通过流内 `error` 表达，HTTP 状态仍为 200；断开会关闭
-  上游模型流并将未完成轮次标记失败。
-- 会话恢复会重放已完成的用户和助手消息，但不会重放此前的工具执行轨迹。
+- 流式接口需要模型服务和代理支持，目前没有断线续传或独立取消接口。
+- 会话恢复使用最新摘要、未覆盖的已完成消息和失败轮次的用户消息，不重放旧工具
+  轨迹，也不自动注入其他会话。
 - 上下文采用 Token 估算和可配置总预算，超限时分批压缩较早历史，在空间允许时
   保留最近完整问答和当前问题。摘要作为 Compaction Item 保存，后续请求恢复最新
   摘要及未覆盖的历史。原始消息不会删除。
 - 初始上下文为工具交互预留空间，知识检索结果按实际剩余容量限制，优先保留完整
   相关片段，必要时截断单个过长片段。返回来源与模型看到的内容一致；暂不压缩
   正在执行的工具链，连最小有效结果都无法容纳时仍明确失败。摘要调用使用聊天模型，
-  其用量暂不计入 Turn 的普通对话用量；当前不保存 Reasoning Item。
+  其用量及失败模型请求的用量暂未完整计入 Turn；当前不保存 Reasoning Item。
 - 项目尚未使用 Alembic 跟踪迁移，部署流程需要自行记录已经执行的 SQL 脚本。
+
+### 技术说明
+
+[技术栈与依赖使用说明](docs/技术栈与依赖使用说明.md) 介绍当前依赖的实际用法、上下文
+预算与压缩、工具结果限制、SSE 与取消处理、数据库事务及代码阅读路径。
 
 ### 项目结构
 
