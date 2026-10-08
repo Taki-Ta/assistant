@@ -167,6 +167,8 @@ class ConversationService:
                         answer = event.text
                     elif isinstance(event, FunctionCallOutputEvent) and event.succeeded:
                         _merge_sources(retrieved_sources, event.sources)
+                    if isinstance(event, (FunctionCallEvent, FunctionCallOutputEvent)):
+                        yield event
             finally:
                 with CancelScope(shield=True):
                     await provider_events.aclose()

@@ -11,6 +11,8 @@ from interview_ai.agent.models import (
     AssistantTextDeltaEvent,
     ChatCompletedEvent,
     ChatStartedEvent,
+    FunctionCallEvent,
+    FunctionCallOutputEvent,
 )
 from interview_ai.agent.providers.openai import ModelResponseError
 from interview_ai.agent.services import SessionNotFoundError
@@ -45,7 +47,8 @@ def decode_sse(text):
     ]
 
 
-def test_stream_endpoint_serializes_events_and_keeps_dependencies_alive():
+@pytest.mark.parametrize("tool_succeeded", [True, False])
+def test_stream_endpoint_serializes_events_and_keeps_dependencies_alive(tool_succeeded):
     service = MagicMock()
     alive = False
     closed = False
@@ -56,6 +59,15 @@ def test_stream_endpoint_serializes_events_and_keeps_dependencies_alive():
             assert alive
             yield ChatStartedEvent(session_id=SESSION_ID, turn_id=TURN_ID)
             assert alive
+            yield FunctionCallEvent(
+                call_id="call-1", tool_name="search", arguments={"query": "你好"}
+            )
+            yield FunctionCallOutputEvent(
+                call_id="call-1",
+                tool_name="search",
+                output='{"结果":"资料\\n内容"}',
+                succeeded=tool_succeeded,
+            )
             yield AssistantTextDeltaEvent(delta='文字\n"换行"')
             yield ChatCompletedEvent(
                 session_id=SESSION_ID, turn_id=TURN_ID, answer='文字\n"换行"'
@@ -81,9 +93,19 @@ def test_stream_endpoint_serializes_events_and_keeps_dependencies_alive():
     assert response.headers["cache-control"] == "no-cache"
     assert response.headers["x-accel-buffering"] == "no"
     frames = decode_sse(response.text)
-    assert [name for name, _ in frames] == ["started", "text_delta", "completed"]
+    assert [name for name, _ in frames] == [
+        "started",
+        "function_call",
+        "function_call_output",
+        "text_delta",
+        "completed",
+    ]
     assert frames[0][1]["session_id"] == str(SESSION_ID)
-    assert frames[1][1]["delta"] == '文字\n"换行"'
+    assert frames[1][1]["arguments"] == {"query": "你好"}
+    assert frames[2][1]["call_id"] == frames[1][1]["call_id"]
+    assert frames[2][1]["succeeded"] is tool_succeeded
+    assert json.loads(frames[2][1]["output"]) == {"结果": "资料\n内容"}
+    assert frames[3][1]["delta"] == '文字\n"换行"'
     assert closed and not alive
 
 

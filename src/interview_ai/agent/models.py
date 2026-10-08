@@ -98,4 +98,10 @@ class ChatCompletedEvent(BaseModel):
     retrieved_sources: tuple[RetrievedSource, ...] = ()
 
 
-ChatStreamEvent = ChatStartedEvent | AssistantTextDeltaEvent | ChatCompletedEvent
+ChatStreamEvent = (
+    ChatStartedEvent
+    | AssistantTextDeltaEvent
+    | FunctionCallEvent
+    | FunctionCallOutputEvent
+    | ChatCompletedEvent
+)

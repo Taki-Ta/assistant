@@ -396,6 +396,9 @@ async def test_chat_stream_sends_deltas_before_persisting_and_completes_after_co
         id=TURN_ID, session_id=SESSION_ID, sequence=0
     )
     provider.generate.return_value = _events(
+        FunctionCallEvent(
+            call_id="call-1", tool_name="search", arguments={"query": "问题"}
+        ),
         FunctionCallOutputEvent(
             call_id="call-1",
             tool_name="search",
@@ -415,6 +418,14 @@ async def test_chat_stream_sends_deltas_before_persisting_and_completes_after_co
     provider.generate.assert_not_called()
     assert repository.append_items.await_count == 1
     assert db.begin.return_value.__aexit__.await_count == 1
+    call = await anext(events)
+    assert isinstance(call, FunctionCallEvent)
+    assert call.arguments == {"query": "问题"}
+    output = await anext(events)
+    assert isinstance(output, FunctionCallOutputEvent)
+    assert output.call_id == call.call_id
+    assert output.sources == (_source(CHUNK_A, 0.9),)
+    repository.complete_turn.assert_not_awaited()
     delta = await anext(events)
     assert isinstance(delta, AssistantTextDeltaEvent)
     repository.complete_turn.assert_not_awaited()
@@ -426,6 +437,7 @@ async def test_chat_stream_sends_deltas_before_persisting_and_completes_after_co
     assert db.begin.return_value.__aexit__.await_count == 2
     saved = repository.append_items.await_args_list[-1].args[0]
     assert [item.item_type for item in saved] == [
+        ItemType.FUNCTION_CALL,
         ItemType.FUNCTION_CALL_OUTPUT,
         ItemType.MESSAGE,
     ]
