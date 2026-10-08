@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator, Sequence
+from collections.abc import AsyncGenerator, Sequence
 from typing import Protocol
 
 from openai.types.responses.function_tool_param import FunctionToolParam
@@ -38,7 +38,9 @@ class AgentProvider(Protocol):
         context: AgentContext,
         dependencies: ToolDependencies,
         instructions: str | None = None,
-    ) -> AsyncIterator[AgentEvent]: ...
+        *,
+        stream: bool = False,
+    ) -> AsyncGenerator[AgentEvent, None]: ...
 
 
 # class ChatInput(Protocol):

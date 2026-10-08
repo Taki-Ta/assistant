@@ -1,6 +1,6 @@
 import json
 import logging
-from collections.abc import AsyncIterator, Sequence
+from collections.abc import AsyncGenerator, Sequence
 from types import TracebackType
 from typing import Self
 
@@ -22,6 +22,7 @@ from ..models import (
     AgentEvent,
     AgentMessage,
     AssistantMessageEvent,
+    AssistantTextDeltaEvent,
     FunctionCallEvent,
     FunctionCallOutputEvent,
     ModelCompletedEvent,
@@ -122,7 +123,10 @@ class OpenAIProvider:
         context: AgentContext,
         dependencies: ToolDependencies,
         instructions: str | None = None,
-    ) -> AsyncIterator[AgentEvent]:
+        *,
+        stream: bool = False,
+    ) -> AsyncGenerator[AgentEvent, None]:
+        """执行工具循环；启用 stream 时额外发送文本增量事件。"""
         input_items: ResponseInputParam = [
             EasyInputMessageParam(role=message.role, content=message.content)
             for message in messages
@@ -143,13 +147,46 @@ class OpenAIProvider:
                 raise ContextBudgetExceeded(
                     "模型请求超过输入预算，可能包含过长的工具结果"
                 )
-            response = await self._client.responses.create(
-                model=config.chat_model,
-                input=list(input_items),
-                tools=tools,
-                instructions=instructions,
-                max_output_tokens=self._budget.output_tokens,
-            )
+            if stream:
+                model_stream = await self._client.responses.create(
+                    model=config.chat_model,
+                    input=list(input_items),
+                    tools=tools,
+                    instructions=instructions,
+                    max_output_tokens=self._budget.output_tokens,
+                    stream=True,
+                )
+                response = None
+                response_id = None
+                async with model_stream:
+                    async for event in model_stream:
+                        if event.type == "response.created":
+                            response_id = event.response.id
+                        elif event.type == "response.output_text.delta":
+                            yield AssistantTextDeltaEvent(
+                                provider_response_id=response_id,
+                                provider_item_id=event.item_id,
+                                delta=event.delta,
+                            )
+                        elif event.type == "response.completed":
+                            response = event.response
+                            break
+                        elif event.type in (
+                            "response.failed",
+                            "response.incomplete",
+                            "error",
+                        ):
+                            raise ModelResponseError("模型响应未正常完成，请重试")
+                if response is None:
+                    raise ModelResponseError("模型响应流意外结束，请重试")
+            else:
+                response = await self._client.responses.create(
+                    model=config.chat_model,
+                    input=list(input_items),
+                    tools=tools,
+                    instructions=instructions,
+                    max_output_tokens=self._budget.output_tokens,
+                )
 
             usage = getattr(response, "usage", None)
             if usage is not None:

@@ -75,5 +75,10 @@ class ModelCompletedEvent(BaseEvent):
     total_tokens: int = 0
 
 
+class AssistantTextDeltaEvent(BaseEvent):
+    type: Literal["text_delta"] = "text_delta"
+    delta: str
+
+
 ConversationEvent = AssistantMessageEvent | FunctionCallEvent | FunctionCallOutputEvent
-AgentEvent = ConversationEvent | ModelCompletedEvent
+AgentEvent = ConversationEvent | ModelCompletedEvent | AssistantTextDeltaEvent
