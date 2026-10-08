@@ -137,6 +137,7 @@ sessions.
 | `POST` | `/api/v1/documents/{document_id}/index` | Chunk and index a document |
 | `POST` | `/api/v1/search` | Search indexed knowledge |
 | `POST` | `/api/v1/chat` | Create or continue a RAG conversation |
+| `POST` | `/api/v1/chat/stream` | Stream a RAG conversation as SSE |
 
 Typical RAG workflow:
 
@@ -162,6 +163,12 @@ curl -X POST http://127.0.0.1:8000/api/v1/chat \
   -H "Content-Type: application/json" \
   -d '{"message":"Explain RAG using my knowledge base."}'
 ```
+
+For streaming, use the same request body and authorization header at
+`/api/v1/chat/stream`. Add `-N` to curl to disable output buffering. Browser clients
+should use `fetch()` with POST and parse SSE frames separated by a blank line;
+network read chunks do not necessarily match event boundaries. Deltas are not
+stored individually; completed messages and tool events are persisted.
 
 The chat response contains a new `session_id`. Send it with the next message to
 continue the conversation:
@@ -237,14 +244,24 @@ Tests marked `network` require configured external services.
 
 ### Current limitations
 
-- Chat responses are non-streaming.
+- `/chat` returns a complete JSON response; `/chat/stream` uses SSE events:
+  `started`, `text_delta`, `completed`, and `error`. `started` includes the session
+  and turn IDs. Text deltas carry `provider_item_id` and `provider_response_id` to
+  distinguish messages across tool rounds. Use the final `completed.answer` as
+  the authoritative answer; `completed` is sent only after database commit.
+  Stream errors after `started` use an `error` event, retaining HTTP status 200.
+  Disconnections close the upstream stream and mark unfinished turns as failed.
 - Conversation recovery replays completed user and assistant messages, but not
   previous tool traces.
 - Context uses approximate token counts and a configurable total budget. Older
   history is summarized in bounded batches; recent turns and the current question
   are retained when space permits. Checkpoints persist as compaction items, and
   subsequent requests restore the latest checkpoint plus uncovered history.
-- Oversized tool-loop requests fail rather than compressing active tool traces.
+- Initial context reserves space for tool interactions. Knowledge search results
+  are limited to the remaining request capacity, keeping complete relevant chunks
+  when possible and truncating a single oversized chunk when necessary. Sources
+  match the content sent to the model; active tool traces are not compressed.
+  Requests still fail if even a minimal useful result cannot fit.
   Summary calls use the chat model but are not included in the Turn's chat usage
   totals. Reasoning items are not currently persisted.
 - Migration execution is not tracked by Alembic; deployments must track applied
@@ -398,6 +415,7 @@ Authorization: Bearer <token>
 | `POST` | `/api/v1/documents/{document_id}/index` | 切分并索引文档 |
 | `POST` | `/api/v1/search` | 检索已索引的知识库 |
 | `POST` | `/api/v1/chat` | 创建或继续 RAG 会话 |
+| `POST` | `/api/v1/chat/stream` | 通过 SSE 流式返回 RAG 回答 |
 
 一次完整的 RAG 使用流程：
 
@@ -494,12 +512,19 @@ uv run ruff format --check src tests
 
 ### 当前限制
 
-- Chat 接口目前不是流式响应。
+- `/chat` 返回完整 JSON；`/chat/stream` 使用 SSE，依次返回 `started`、
+  `text_delta` 和 `completed`，失败时返回 `error`。开始事件包含会话与轮次 ID，
+  增量中的 `provider_item_id` 和 `provider_response_id` 用于区分多次工具交互中的
+  消息。最终以 `completed.answer` 为准，完成事件只在数据库提交后发送。
+  开始事件之后的失败通过流内 `error` 表达，HTTP 状态仍为 200；断开会关闭
+  上游模型流并将未完成轮次标记失败。
 - 会话恢复会重放已完成的用户和助手消息，但不会重放此前的工具执行轨迹。
 - 上下文采用 Token 估算和可配置总预算，超限时分批压缩较早历史，在空间允许时
   保留最近完整问答和当前问题。摘要作为 Compaction Item 保存，后续请求恢复最新
   摘要及未覆盖的历史。原始消息不会删除。
-- 本轮工具交互超限时明确失败，暂不压缩正在执行的工具链。摘要调用使用聊天模型，
+- 初始上下文为工具交互预留空间，知识检索结果按实际剩余容量限制，优先保留完整
+  相关片段，必要时截断单个过长片段。返回来源与模型看到的内容一致；暂不压缩
+  正在执行的工具链，连最小有效结果都无法容纳时仍明确失败。摘要调用使用聊天模型，
   其用量暂不计入 Turn 的普通对话用量；当前不保存 Reasoning Item。
 - 项目尚未使用 Alembic 跟踪迁移，部署流程需要自行记录已经执行的 SQL 脚本。
 
