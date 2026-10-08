@@ -1,3 +1,4 @@
+import asyncio
 import json
 from unittest.mock import MagicMock
 from uuid import UUID
@@ -171,3 +172,91 @@ async def test_response_send_failure_closes_primed_generator(fail_at):
     with pytest.raises(ClientDisconnect):
         await response({"type": "http", "asgi": {"spec_version": "2.4"}}, receive, send)
     assert closed
+
+
+@pytest.mark.asyncio
+async def test_heartbeats_keep_waiting_on_same_event_without_cancelling_work(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        "interview_ai.api.routes.ai.SSE_HEARTBEAT_INTERVAL_SECONDS", 0.01
+    )
+    service = MagicMock()
+    release = asyncio.Event()
+    readers = []
+    closed = False
+
+    async def stream(*args):
+        nonlocal closed
+        try:
+            yield ChatStartedEvent(session_id=SESSION_ID, turn_id=TURN_ID)
+            readers.append(asyncio.current_task())
+            await release.wait()
+            yield AssistantTextDeltaEvent(delta="回答")
+            yield ChatCompletedEvent(
+                session_id=SESSION_ID, turn_id=TURN_ID, answer="回答"
+            )
+        finally:
+            closed = True
+
+    service.chat_stream.side_effect = stream
+    response = await chat_stream(ChatRequest(message="问题"), service, None, None)
+    body = response.body_iterator
+    try:
+        assert (await anext(body)).startswith("event: started")
+        assert await asyncio.wait_for(anext(body), 1) == ": ping\n\n"
+        assert await asyncio.wait_for(anext(body), 1) == ": ping\n\n"
+        assert len(readers) == 1
+        assert not readers[0].done()
+        assert not closed
+        release.set()
+        delta = await asyncio.wait_for(anext(body), 1)
+        assert decode_sse(delta)[0][0] == "text_delta"
+        completed = await asyncio.wait_for(anext(body), 1)
+        assert decode_sse(completed)[0][0] == "completed"
+        with pytest.raises(StopAsyncIteration):
+            await anext(body)
+    finally:
+        await body.aclose()
+        await response._events.aclose()
+    assert closed and readers[0].done()
+
+
+@pytest.mark.asyncio
+async def test_disconnect_during_heartbeat_cancels_reader_and_closes_session(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        "interview_ai.api.routes.ai.SSE_HEARTBEAT_INTERVAL_SECONDS", 0.01
+    )
+    service = MagicMock()
+    readers = []
+    closed = False
+
+    async def stream(*args):
+        nonlocal closed
+        try:
+            yield ChatStartedEvent(session_id=SESSION_ID, turn_id=TURN_ID)
+            readers.append(asyncio.current_task())
+            await asyncio.Event().wait()
+        finally:
+            closed = True
+
+    service.chat_stream.side_effect = stream
+    response = await chat_stream(ChatRequest(message="问题"), service, None, None)
+
+    async def receive():
+        return {"type": "http.request", "body": b"", "more_body": False}
+
+    async def send(message):
+        if message.get("body") == b": ping\n\n":
+            raise OSError("client disconnected")
+
+    with pytest.raises(ClientDisconnect):
+        await asyncio.wait_for(
+            response({"type": "http", "asgi": {"spec_version": "2.4"}}, receive, send),
+            1,
+        )
+    assert closed
+    assert len(readers) == 1
+    assert readers[0].done() and readers[0].cancelled()

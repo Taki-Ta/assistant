@@ -1,5 +1,7 @@
+import asyncio
 import logging
 from collections.abc import AsyncGenerator
+from contextlib import suppress
 
 from anyio import CancelScope
 from fastapi import APIRouter, HTTPException, status
@@ -27,6 +29,7 @@ from ..dependencies import (
 from ..schemas import ChatErrorEvent, ChatRequest, ChatResponse, SourceResponse
 
 router = APIRouter(prefix="/api/v1", tags=["ai"])
+SSE_HEARTBEAT_INTERVAL_SECONDS = 15
 
 
 @router.post("/chat")
@@ -108,8 +111,23 @@ class ChatStreamingResponse(StreamingResponse):
 
     async def _body(self):
         yield f"event: {self._first.type}\ndata: {self._first.model_dump_json()}\n\n"
+        pending = None
         try:
-            async for event in self._events:
+            while True:
+                if pending is None:
+                    pending = asyncio.create_task(anext(self._events))
+                # 超时只发送心跳，继续等待同一次读取，不取消模型或工具执行。
+                done, _ = await asyncio.wait(
+                    [pending], timeout=SSE_HEARTBEAT_INTERVAL_SECONDS
+                )
+                if not done:
+                    yield ": ping\n\n"
+                    continue
+                finished, pending = pending, None
+                try:
+                    event = finished.result()
+                except StopAsyncIteration:
+                    break
                 yield f"event: {event.type}\ndata: {event.model_dump_json()}\n\n"
         except Exception as exc:
             logging.getLogger(__name__).exception("流式会话失败")
@@ -121,6 +139,12 @@ class ChatStreamingResponse(StreamingResponse):
                 turn_id=self._first.turn_id,
             )
             yield f"event: error\ndata: {error.model_dump_json()}\n\n"
+        finally:
+            with CancelScope(shield=True):
+                if pending is not None:
+                    pending.cancel()
+                    with suppress(asyncio.CancelledError, StopAsyncIteration):
+                        await pending
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         try:
