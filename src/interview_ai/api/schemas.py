@@ -1,3 +1,4 @@
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -25,3 +26,11 @@ class ChatResponse(BaseModel):
     answer: str
     retrieved_sources: tuple[SourceResponse, ...] = ()
     session_id: UUID
+
+
+class ChatErrorEvent(BaseModel):
+    type: Literal["error"] = "error"
+    code: str
+    message: str
+    session_id: UUID
+    turn_id: UUID

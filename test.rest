@@ -52,3 +52,14 @@ Content-Type: application/json
 {
     "message": "介绍下你自己"
 }
+
+
+### streaming chat
+POST http://{{host}}/{{prefix}}/chat/stream
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: text/event-stream
+
+{
+    "message": "介绍下你自己"
+}
