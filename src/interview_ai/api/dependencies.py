@@ -9,7 +9,7 @@ from interview_ai.agent.context.builder import ContextBuilder
 from interview_ai.agent.providers.openai import OpenAIProvider
 from interview_ai.agent.repository import ConversationRepository
 from interview_ai.agent.runtime import AgentContext, ToolDependencies
-from interview_ai.agent.services import ConversationService
+from interview_ai.agent.services import ConversationService, SessionService
 from interview_ai.api.auth import verify_bearer
 from interview_ai.config import config
 from interview_ai.db.database import get_conversation_db, get_db
@@ -118,3 +118,10 @@ ToolDependenciesDependency = Annotated[
 
 
 IndexServiceDependency = Annotated[IndexService, Depends(get_index_service)]
+
+
+def get_session_service(db: ConversationDatabaseSession) -> SessionService:
+    return SessionService(db, ConversationRepository(db))
+
+
+SessionServiceDependency = Annotated[SessionService, Depends(get_session_service)]

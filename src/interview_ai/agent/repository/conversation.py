@@ -2,17 +2,20 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col
 
 from interview_ai.db.models import (
+    Chunk,
     ConversationItem,
+    Document,
     ItemRole,
     ItemType,
     Session,
     Turn,
     TurnStatus,
+    utc_now,
 )
 
 
@@ -167,4 +170,91 @@ class ConversationRepository:
         turn.status = TurnStatus.FAILED
         turn.error_message = error_message
         turn.completed_at = completed_at
+        await self._db.flush()
+
+    async def list_sessions(
+        self,
+        owner_id: str,
+        *,
+        limit: int,
+        before: tuple[datetime, UUID] | None = None,
+    ) -> list[Session]:
+        statement = select(Session).where(
+            col(Session.owner_id) == owner_id,
+            col(Session.is_deleted).is_(False),
+        )
+        if before is not None:
+            updated_at, session_id = before
+            statement = statement.where(
+                or_(
+                    col(Session.updated_at) < updated_at,
+                    and_(
+                        col(Session.updated_at) == updated_at,
+                        col(Session.id) < session_id,
+                    ),
+                )
+            )
+        result = await self._db.scalars(
+            statement.order_by(
+                col(Session.updated_at).desc(), col(Session.id).desc()
+            ).limit(limit)
+        )
+        return list(result)
+
+    async def list_turns(
+        self,
+        session_id: UUID,
+        *,
+        limit: int,
+        before_sequence: int | None = None,
+    ) -> list[Turn]:
+        statement = select(Turn).where(col(Turn.session_id) == session_id)
+        if before_sequence is not None:
+            statement = statement.where(col(Turn.sequence) < before_sequence)
+        result = await self._db.scalars(
+            statement.order_by(col(Turn.sequence).desc()).limit(limit)
+        )
+        return list(result)
+
+    async def list_display_items(self, turn_ids: list[UUID]) -> list[ConversationItem]:
+        if not turn_ids:
+            return []
+        result = await self._db.scalars(
+            select(ConversationItem)
+            .where(
+                col(ConversationItem.turn_id).in_(turn_ids),
+                col(ConversationItem.item_type).in_(
+                    [
+                        ItemType.MESSAGE,
+                        ItemType.FUNCTION_CALL,
+                        ItemType.FUNCTION_CALL_OUTPUT,
+                    ]
+                ),
+            )
+            .order_by(col(ConversationItem.sequence))
+        )
+        return list(result)
+
+    async def list_source_chunks(
+        self, chunk_ids: list[UUID], owner_id: str
+    ) -> list[tuple[Chunk, str]]:
+        if not chunk_ids:
+            return []
+        result = await self._db.execute(
+            select(Chunk, Document.name)
+            .join(Document, col(Chunk.document_id) == col(Document.id))
+            .where(col(Chunk.id).in_(chunk_ids), col(Document.owner_id) == owner_id)
+        )
+        return [(chunk, name) for chunk, name in result]
+
+    async def touch_session(self, session_id: UUID) -> None:
+        await self._db.execute(
+            update(Session)
+            .where(col(Session.id) == session_id)
+            .values(updated_at=utc_now())
+        )
+
+    async def delete_session(self, session: Session) -> None:
+        session.is_deleted = True
+        session.updated_at = utc_now()
         await self._db.flush()

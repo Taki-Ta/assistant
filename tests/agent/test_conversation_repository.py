@@ -99,3 +99,103 @@ async def test_context_history_without_checkpoint_returns_original_history():
         )
         == []
     )
+
+
+@pytest.mark.asyncio
+async def test_session_queries_enforce_owner_deletion_filter_and_stable_pagination():
+    from datetime import UTC, datetime
+
+    db = MagicMock(spec=AsyncSession)
+    db.scalars = AsyncMock(return_value=[])
+    db.scalar = AsyncMock(return_value=None)
+    repository = ConversationRepository(db)
+    timestamp = datetime(2026, 10, 10, tzinfo=UTC)
+    await repository.list_sessions("owner", limit=21, before=(timestamp, SESSION_ID))
+    statement = db.scalars.await_args.args[0]
+    sql = str(statement)
+    params = statement.compile().params
+    assert "sessions.owner_id =" in sql
+    assert "sessions.is_deleted IS false" in sql
+    assert "sessions.updated_at <" in sql
+    assert "sessions.updated_at =" in sql
+    assert "sessions.id <" in sql
+    assert "ORDER BY sessions.updated_at DESC, sessions.id DESC" in sql
+    assert "owner" in params.values()
+    assert timestamp in params.values()
+    assert SESSION_ID in params.values()
+    assert statement._limit_clause.value == 21
+    await repository.get_session(SESSION_ID, "other-owner")
+    statement = db.scalar.await_args.args[0]
+    assert "sessions.is_deleted IS false" in str(statement)
+    assert "other-owner" in statement.compile().params.values()
+    assert SESSION_ID in statement.compile().params.values()
+
+
+@pytest.mark.asyncio
+async def test_display_history_keeps_all_turn_statuses_and_excludes_internal_items():
+    db = MagicMock(spec=AsyncSession)
+    db.scalars = AsyncMock(return_value=[])
+    repository = ConversationRepository(db)
+    await repository.list_turns(SESSION_ID, limit=21, before_sequence=4)
+    statement = db.scalars.await_args.args[0]
+    assert "turns.sequence <" in str(statement)
+    assert "turns.status =" not in str(statement)
+    assert "ORDER BY turns.sequence DESC" in str(statement)
+    assert statement._limit_clause.value == 21
+    assert SESSION_ID in statement.compile().params.values()
+    await repository.list_display_items([TURN_ID])
+    statement = db.scalars.await_args.args[0]
+    values = statement.compile().params
+    assert values["turn_id_1"] == [TURN_ID]
+    assert set(values["item_type_1"]) == {
+        "message",
+        "function_call",
+        "function_call_output",
+    }
+    assert "ORDER BY conversation_items.sequence" in str(statement)
+    db.scalars.reset_mock()
+    assert await repository.list_display_items([]) == []
+    db.scalars.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_soft_delete_preserves_history_and_does_not_commit():
+    from interview_ai.db.models import Session
+
+    db = MagicMock(spec=AsyncSession)
+    db.flush = AsyncMock()
+    repository = ConversationRepository(db)
+    session = Session(owner_id="owner")
+    previous = session.updated_at
+    await repository.delete_session(session)
+    assert session.is_deleted is True
+    assert session.updated_at >= previous
+    db.flush.assert_awaited_once()
+    db.delete.assert_not_called()
+    db.commit.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_touch_session_updates_only_timestamp_not_deleted_flag():
+    db = MagicMock(spec=AsyncSession)
+    db.execute = AsyncMock()
+    await ConversationRepository(db).touch_session(SESSION_ID)
+    statement = db.execute.await_args.args[0]
+    assert "UPDATE sessions SET updated_at=" in str(statement)
+    assert "is_deleted" not in str(statement)
+    assert SESSION_ID in statement.compile().params.values()
+
+
+@pytest.mark.asyncio
+async def test_legacy_source_lookup_is_scoped_to_document_owner():
+    db = MagicMock(spec=AsyncSession)
+    db.execute = AsyncMock(return_value=[])
+    repository = ConversationRepository(db)
+    assert await repository.list_source_chunks([TURN_ID], "owner") == []
+    statement = db.execute.await_args.args[0]
+    assert "JOIN documents" in str(statement)
+    assert "documents.owner_id =" in str(statement)
+    assert "owner" in statement.compile().params.values()
+    db.execute.reset_mock()
+    assert await repository.list_source_chunks([], "owner") == []
+    db.execute.assert_not_awaited()

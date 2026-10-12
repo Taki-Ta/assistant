@@ -93,6 +93,9 @@ class ConversationService:
                 if session is None:
                     raise SessionNotFoundError(str(session_id))
 
+            if session.title is None:
+                session.title = " ".join(message.split())[:80] or "新会话"
+            session.updated_at = utc_now()
             turn = await self._repository.create_turn(session.id)
             history_items = await self._repository.list_context_history(
                 session.id,
@@ -190,6 +193,7 @@ class ConversationService:
                     total_tokens=completed.total_tokens,
                     completed_at=utc_now(),
                 )
+                await self._repository.touch_session(session_id)
         except (Exception, CancelledError, GeneratorExit) as exc:
             # 取消同样需要收尾；事务退出后保存，再继续向外传播取消。
             with CancelScope(shield=True):
@@ -206,6 +210,7 @@ class ConversationService:
                         ),
                         completed_at=utc_now(),
                     )
+                    await self._repository.touch_session(session_id)
             raise
 
         sources = tuple(
@@ -292,17 +297,6 @@ def _event_to_item(
         payload={
             "provider_response_id": event.provider_response_id,
             "succeeded": event.succeeded,
-            "sources": [
-                {
-                    "chunk_id": str(source.chunk_id),
-                    "document_id": (
-                        str(source.document_id)
-                        if source.document_id is not None
-                        else None
-                    ),
-                    "score": source.score,
-                }
-                for source in event.sources
-            ],
+            "sources": [source.model_dump(mode="json") for source in event.sources],
         },
     )

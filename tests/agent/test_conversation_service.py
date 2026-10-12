@@ -544,3 +544,57 @@ async def test_stream_does_not_emit_completed_when_persistence_fails():
             received.append(event)
     assert [type(event) for event in received] == [ChatStartedEvent]
     repository.fail_turn.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("existing_title", [None, "已有标题"])
+@pytest.mark.parametrize("failed", [False, True])
+async def test_chat_maintains_session_title_and_activity_time(existing_title, failed):
+    service, _, repository, provider = _service()
+    session = Session(id=SESSION_ID, owner_id="user-001", title=existing_title)
+    previous_updated = session.updated_at
+    turn = Turn(id=TURN_ID, session_id=SESSION_ID, sequence=0)
+    repository.get_session.return_value = session
+    repository.create_turn.return_value = turn
+    provider.generate.return_value = (
+        _events(error=RuntimeError("模型失败"))
+        if failed
+        else _events(AssistantMessageEvent(text="回答"), _completed())
+    )
+    context, dependencies = _runtime()
+    message = "  第一行\n" + "很长的问题" * 30
+    if failed:
+        with pytest.raises(RuntimeError, match="模型失败"):
+            await service.chat(SESSION_ID, message, context, dependencies)
+        repository.fail_turn.assert_awaited_once()
+    else:
+        await service.chat(SESSION_ID, message, context, dependencies)
+        repository.complete_turn.assert_awaited_once()
+    assert session.title == (existing_title or " ".join(message.split())[:80])
+    assert len(session.title) <= 80
+    assert session.updated_at >= previous_updated
+    repository.touch_session.assert_awaited_once_with(SESSION_ID)
+
+
+def test_tool_sources_are_persisted_as_complete_snapshots():
+    from interview_ai.agent.services.conversation import _event_to_item
+
+    source = RetrievedSource(
+        chunk_id=CHUNK_A,
+        document_id=CHUNK_B,
+        document_name="文档",
+        content="资料正文",
+        score=0.8,
+        headings=("章节",),
+        start_line=1,
+        end_line=3,
+    )
+    event = FunctionCallOutputEvent(
+        call_id="call",
+        tool_name="search_knowledge",
+        output="结果",
+        succeeded=True,
+        sources=(source,),
+    )
+    item = _event_to_item(TURN_ID, 2, event)
+    assert item.payload["sources"] == [source.model_dump(mode="json")]
