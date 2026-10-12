@@ -150,6 +150,10 @@ sessions.
 | `POST` | `/api/v1/search` | Search indexed knowledge |
 | `POST` | `/api/v1/chat` | Create or continue a RAG conversation |
 | `POST` | `/api/v1/chat/stream` | Stream a RAG conversation as SSE |
+| `GET` | `/api/v1/sessions` | List sessions |
+| `GET` | `/api/v1/sessions/{session_id}` | Get session metadata |
+| `GET` | `/api/v1/sessions/{session_id}/turns` | Read paginated turns |
+| `DELETE` | `/api/v1/sessions/{session_id}` | Soft-delete a session |
 
 Typical RAG workflow:
 
@@ -470,6 +474,10 @@ Authorization: Bearer <token>
 | `POST` | `/api/v1/search` | 检索已索引的知识库 |
 | `POST` | `/api/v1/chat` | 创建或继续 RAG 会话 |
 | `POST` | `/api/v1/chat/stream` | 通过 SSE 流式返回 RAG 回答 |
+| `GET` | `/api/v1/sessions` | 列出会话 |
+| `GET` | `/api/v1/sessions/{session_id}` | 获取会话信息 |
+| `GET` | `/api/v1/sessions/{session_id}/turns` | 分页获取历史轮次 |
+| `DELETE` | `/api/v1/sessions/{session_id}` | 软删除会话 |
 
 一次完整的 RAG 使用流程：
 
@@ -633,3 +641,12 @@ scripts/            数据集与基准测试辅助脚本
 tests/              单元、API、数据库和集成测试
 docs/               架构与依赖说明
 ```
+
+会话分页、历史展示项与删除行为见 [会话接口说明](docs/会话接口.md)。
+
+### 前端会话页面
+
+前端位于 `frontend/`，使用 React、TypeScript 和 Tailwind CSS。先启动 FastAPI，
+再执行 `cd frontend`、`npm ci`、`npm run dev`，在页面设置中填写 Bearer Token。
+支持服务端会话历史、流式回答、工具状态、来源展示和停止生成。
+运行、测试及部署方式见 [前端说明](frontend/README.md)。
