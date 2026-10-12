@@ -1,0 +1,142 @@
+@import 'tailwindcss';
+@theme {
+  --font-sans: 'Inter', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+}
+:root {
+  font-family: var(--font-sans);
+  color: #343631;
+  background: #fafaf8;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+button,
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+button:not(:disabled),
+summary {
+  cursor: pointer;
+}
+button:focus-visible,
+summary:focus-visible,
+a:focus-visible {
+  outline: 2px solid #65836b;
+  outline-offset: 3px;
+}
+::selection {
+  background: #dce7dc;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d4d5ce transparent;
+}
+.markdown {
+  overflow-wrap: anywhere;
+}
+.markdown > :first-child {
+  margin-top: 0;
+}
+.markdown p {
+  margin: 0.7rem 0;
+}
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4 {
+  font-weight: 600;
+  margin: 1.3rem 0 0.6rem;
+  line-height: 1.5;
+}
+.markdown h1 {
+  font-size: 1.4rem;
+}
+.markdown h2 {
+  font-size: 1.15rem;
+}
+.markdown ul,
+.markdown ol {
+  padding-left: 1.5rem;
+  margin: 0.75rem 0;
+}
+.markdown ul {
+  list-style: disc;
+}
+.markdown ol {
+  list-style: decimal;
+}
+.markdown li {
+  margin: 0.25rem 0;
+}
+.markdown li > p {
+  margin: 0.25rem 0;
+}
+.markdown a {
+  color: #37644d;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.markdown blockquote {
+  border-left: 3px solid #d7ddd2;
+  padding-left: 1rem;
+  color: #6b7067;
+}
+.markdown pre {
+  overflow-x: auto;
+  padding: 1rem;
+  border: 1px solid #e5e6e0;
+  border-radius: 0.8rem;
+  background: #f0f1ec;
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 1rem 0;
+}
+.markdown code {
+  background: #eeeee9;
+  padding: 0.15rem 0.3rem;
+  border-radius: 0.25rem;
+  font-size: 0.85em;
+}
+.markdown pre code {
+  background: transparent;
+  padding: 0;
+}
+.markdown table {
+  display: block;
+  overflow-x: auto;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+.markdown th,
+.markdown td {
+  border: 1px solid #dedfd8;
+  padding: 0.4rem 0.7rem;
+  min-width: 80px;
+}
+.markdown th {
+  background: #f0f1ec;
+  font-weight: 500;
+}
+.markdown hr {
+  border-color: #e7e7df;
+  margin: 1.4rem 0;
+}
+.markdown img {
+  max-width: 100%;
+  border-radius: 0.5rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

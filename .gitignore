@@ -11,3 +11,9 @@ wheels/
 /manifest
 .env
 /evals/*/reports/
+
+# Frontend
+node_modules/
+frontend/.env.local
+frontend/coverage/
+*.tsbuildinfo
