@@ -77,6 +77,7 @@ class ModelCompletedEvent(BaseEvent):
 
 class AssistantTextDeltaEvent(BaseEvent):
     type: Literal["text_delta"] = "text_delta"
+    stream_key: str | None = None
     delta: str
 
 
