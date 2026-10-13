@@ -11,6 +11,22 @@ function started() {
 function event(state: ChatState, event: ChatEvent) {
   return chatReducer(state, { type: 'event', event })
 }
+it('uses stream keys to separate LangChain model rounds without provider ids', () => {
+  let state = event(started(), { type: 'text_delta', delta: '先查询', stream_key: 'model-1' })
+  state = event(state, {
+    type: 'function_call',
+    call_id: 'c1',
+    tool_name: 'search_knowledgebase',
+    arguments: {},
+  })
+  state = event(state, { type: 'text_delta', delta: '最终', stream_key: 'model-2' })
+  state = event(state, { type: 'text_delta', delta: '回答', stream_key: 'model-2' })
+  expect(state.turns[0].items.filter((i) => i.type === 'message').map((i) => i.text)).toEqual([
+    '问题',
+    '先查询',
+    '最终回答',
+  ])
+})
 it('keeps intermediate model messages separate and calibrates only the final answer', () => {
   let state = started()
   state = event(state, {

@@ -72,7 +72,8 @@ export function chatReducer(state: ChatState, action: Action): ChatState {
       phase = 'streaming'
     }
     if (event.type === 'text_delta') {
-      const key = `${event.provider_response_id ?? ''}/${event.provider_item_id ?? ''}`
+      const key =
+        event.stream_key ?? `${event.provider_response_id ?? ''}/${event.provider_item_id ?? ''}`
       const index = next.items.findIndex(
         (i) => i.type === 'message' && i.role === 'assistant' && i.streamKey === key,
       )

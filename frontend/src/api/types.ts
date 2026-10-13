@@ -60,6 +60,7 @@ export type ChatEvent =
   | {
       type: 'text_delta'
       delta: string
+      stream_key?: string | null
       provider_response_id?: string | null
       provider_item_id?: string | null
     }
