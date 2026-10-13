@@ -30,7 +30,12 @@ async def get_conversation_service(
     db: ConversationDatabaseSession,
 ) -> AsyncIterator[ConversationService]:
     budget = ContextBudget.configured()
-    async with OpenAIProvider(budget=budget) as provider:
+    provider_type = OpenAIProvider
+    if config.chat_provider == "langchain":
+        from interview_ai.agent.providers.langchain import LangChainProvider
+
+        provider_type = LangChainProvider
+    async with provider_type(budget=budget) as provider:
         yield ConversationService(
             _db=db,
             _repository=ConversationRepository(db),
