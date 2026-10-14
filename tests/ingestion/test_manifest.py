@@ -3,15 +3,15 @@ from dataclasses import asdict
 
 import pytest
 
-from interview_ai.ingestion.manifest import (
+from zhiyin.ingestion.manifest import (
     compare_manifests,
     generate_manifest,
     generate_manifest_dict,
     load_manifest,
     save_manifest,
 )
-from interview_ai.ingestion.models import Manifest
-from interview_ai.ingestion.scanner import split_document
+from zhiyin.ingestion.models import Manifest
+from zhiyin.ingestion.scanner import split_document
 
 from .util import make_file
 

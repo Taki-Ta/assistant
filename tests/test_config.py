@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from interview_ai.config import Settings
+from zhiyin.config import Settings
 
 
 def test_Settings_reads_debug_flag_case_insensitively(monkeypatch):

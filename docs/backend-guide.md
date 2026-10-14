@@ -107,17 +107,17 @@ Token counts are estimates, not model-specific tokenizer measurements.
 
 ```powershell
 psql -d "postgresql://postgres:postgres@localhost:5432/interview_ai" `
-  -f src/interview_ai/migration/init_sql
+  -f src/zhiyin/migration/init_sql
 ```
 
 For an existing database, apply the numbered migration scripts that have not
 yet been executed, including
-`src/interview_ai/migration/002_create_agent_conversations.sql`.
+`src/zhiyin/migration/002_create_agent_conversations.sql`.
 
 5. Start the API:
 
 ```powershell
-uv run fastapi dev src/interview_ai/api/app.py
+uv run fastapi dev src/zhiyin/api/app.py
 ```
 
 When `IS_DEBUG=true`, Swagger UI is available at
@@ -129,7 +129,7 @@ Protected endpoints require an HS256 bearer token containing a non-empty `sub`
 claim. For local development, generate one with the configured `JWT_SECRET`:
 
 ```powershell
-uv run python -c "from interview_ai.util import jwt_encode; print(jwt_encode({'sub': 'demo-user'}))"
+uv run python -c "from zhiyin.util import jwt_encode; print(jwt_encode({'sub': 'demo-user'}))"
 ```
 
 Use it as:
@@ -260,23 +260,23 @@ use an SSE `error` event while HTTP status remains 200. A stream ending without
 Scan Markdown files:
 
 ```powershell
-uv run interview_ai scan <knowledge-directory>
+uv run zhiyin scan <knowledge-directory>
 ```
 
 Preview added, modified, deleted, and unchanged documents without writing a
 manifest or changing the vector index:
 
 ```powershell
-uv run interview_ai plan <knowledge-directory>
-uv run interview_ai plan <knowledge-directory> --manifest <manifest.json>
-uv run interview_ai plan <knowledge-directory> --json --show-unchanged
+uv run zhiyin plan <knowledge-directory>
+uv run zhiyin plan <knowledge-directory> --manifest <manifest.json>
+uv run zhiyin plan <knowledge-directory> --json --show-unchanged
 ```
 
 Run the retrieval benchmark. This command rebuilds an isolated evaluation index
 and makes real embedding requests, which may incur cost:
 
 ```powershell
-uv run interview_ai eval-retrieval `
+uv run zhiyin eval-retrieval `
   --dataset evals/python_tutorial `
   --limit 5 `
   --report evals/python_tutorial/reports/baseline.json
@@ -320,7 +320,7 @@ transactions, and code navigation.
 ### Project layout
 
 ```text
-src/interview_ai/
+src/zhiyin/
 ├── agent/          Providers, tools, events, conversation service/repository
 ├── api/            FastAPI app, routes, authentication, dependencies, schemas
 ├── db/             SQLModel models and PostgreSQL repositories
@@ -434,16 +434,16 @@ Embedding 维度必须与数据库的 `VECTOR` 维度一致，当前表结构使
 
 ```powershell
 psql -d "postgresql://postgres:postgres@localhost:5432/interview_ai" `
-  -f src/interview_ai/migration/init_sql
+  -f src/zhiyin/migration/init_sql
 ```
 
 已有数据库需要按顺序执行尚未应用的增量迁移，包括
-`src/interview_ai/migration/002_create_agent_conversations.sql`。
+`src/zhiyin/migration/002_create_agent_conversations.sql`。
 
 5. 启动 API：
 
 ```powershell
-uv run fastapi dev src/interview_ai/api/app.py
+uv run fastapi dev src/zhiyin/api/app.py
 ```
 
 当 `IS_DEBUG=true` 时，可以访问 `http://127.0.0.1:8000/docs` 查看 Swagger UI。
@@ -454,7 +454,7 @@ uv run fastapi dev src/interview_ai/api/app.py
 可以使用 `.env` 中的 `JWT_SECRET` 生成 Token：
 
 ```powershell
-uv run python -c "from interview_ai.util import jwt_encode; print(jwt_encode({'sub': 'demo-user'}))"
+uv run python -c "from zhiyin.util import jwt_encode; print(jwt_encode({'sub': 'demo-user'}))"
 ```
 
 请求头格式：
@@ -577,21 +577,21 @@ curl -N -X POST http://127.0.0.1:8000/api/v1/chat/stream \
 扫描 Markdown 文件：
 
 ```powershell
-uv run interview_ai scan <知识库目录>
+uv run zhiyin scan <知识库目录>
 ```
 
 只读预览新增、修改、删除和未变化的文档，不写入 Manifest，也不修改向量索引：
 
 ```powershell
-uv run interview_ai plan <知识库目录>
-uv run interview_ai plan <知识库目录> --manifest <manifest.json>
-uv run interview_ai plan <知识库目录> --json --show-unchanged
+uv run zhiyin plan <知识库目录>
+uv run zhiyin plan <知识库目录> --manifest <manifest.json>
+uv run zhiyin plan <知识库目录> --json --show-unchanged
 ```
 
 运行检索基准测试。命令会重建隔离的评测索引，并发起真实 Embedding 请求，可能产生费用：
 
 ```powershell
-uv run interview_ai eval-retrieval `
+uv run zhiyin eval-retrieval `
   --dataset evals/python_tutorial `
   --limit 5 `
   --report evals/python_tutorial/reports/baseline.json
@@ -617,7 +617,7 @@ uv run ruff format --check src tests
 
 ### 用户偏好
 
-执行增量迁移 `src/interview_ai/migration/003_create_user_preferences.sql` 后，
+执行增量迁移 `src/zhiyin/migration/003_create_user_preferences.sql` 后，
 可以在聊天中说“以后代码示例默认用 Python”“记住，回答尽量简洁”，或要求忘记某项偏好。
 OpenAI Provider 支持 `remember_preference`、`forget_preference` 工具。
 目前支持回答语言、回答详细程度和代码示例语言，按用户隔离并记录来源轮次。
@@ -649,7 +649,7 @@ OpenAI Provider 支持 `remember_preference`、`forget_preference` 工具。
 ### 项目结构
 
 ```text
-src/interview_ai/
+src/zhiyin/
 ├── agent/          Provider、工具、事件、会话 Service 与 Repository
 ├── api/            FastAPI 应用、路由、认证、依赖和 Schema
 ├── db/             SQLModel 模型和 PostgreSQL Repository

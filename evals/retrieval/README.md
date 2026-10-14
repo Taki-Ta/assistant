@@ -48,13 +48,13 @@ retrieval/
 确保 PostgreSQL、pgvector 和 Embedding 配置可用，然后执行：
 
 ```powershell
-uv run interview_ai eval-retrieval
+uv run zhiyin eval-retrieval
 ```
 
 指定数据集、Top-K 和报告路径：
 
 ```powershell
-uv run interview_ai eval-retrieval `
+uv run zhiyin eval-retrieval `
   --dataset evals/retrieval `
   --limit 5 `
   --report evals/retrieval/reports/baseline.json

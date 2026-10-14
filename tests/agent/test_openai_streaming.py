@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from interview_ai.agent.models import (
+from zhiyin.agent.models import (
     AgentMessage,
     AssistantMessageEvent,
     AssistantTextDeltaEvent,
@@ -13,9 +13,9 @@ from interview_ai.agent.models import (
     ModelCompletedEvent,
     ToolExecutionResult,
 )
-from interview_ai.agent.providers.openai import ModelResponseError, OpenAIProvider
-from interview_ai.agent.runtime import AgentContext, ToolDependencies
-from interview_ai.agent.tools.registry import ToolRegistry
+from zhiyin.agent.providers.openai import ModelResponseError, OpenAIProvider
+from zhiyin.agent.runtime import AgentContext, ToolDependencies
+from zhiyin.agent.tools.registry import ToolRegistry
 
 
 class FakeStream:

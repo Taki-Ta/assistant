@@ -8,9 +8,9 @@ from anyio import CancelScope
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid6 import uuid7
 
-from interview_ai.agent.context.builder import ContextBuilder
-from interview_ai.agent.context.models import BuiltContext, CompactionCheckpoint
-from interview_ai.agent.models import (
+from zhiyin.agent.context.builder import ContextBuilder
+from zhiyin.agent.context.models import BuiltContext, CompactionCheckpoint
+from zhiyin.agent.models import (
     AgentEvent,
     AgentMessage,
     AssistantMessageEvent,
@@ -22,11 +22,11 @@ from interview_ai.agent.models import (
     ModelCompletedEvent,
     RetrievedSource,
 )
-from interview_ai.agent.repository import ConversationRepository
-from interview_ai.agent.runtime import AgentContext, ToolDependencies
-from interview_ai.agent.services import ConversationService, SessionNotFoundError
-from interview_ai.db.models import ConversationItem, ItemRole, ItemType, Session, Turn
-from interview_ai.indexing.search_service import SearchService
+from zhiyin.agent.repository import ConversationRepository
+from zhiyin.agent.runtime import AgentContext, ToolDependencies
+from zhiyin.agent.services import ConversationService, SessionNotFoundError
+from zhiyin.db.models import ConversationItem, ItemRole, ItemType, Session, Turn
+from zhiyin.indexing.search_service import SearchService
 
 SESSION_ID = UUID("01900000-0000-7000-8000-000000000010")
 TURN_ID = UUID("01900000-0000-7000-8000-000000000011")
@@ -600,7 +600,7 @@ async def test_chat_maintains_session_title_and_activity_time(existing_title, fa
 
 
 def test_tool_sources_are_persisted_as_complete_snapshots():
-    from interview_ai.agent.services.conversation import _event_to_item
+    from zhiyin.agent.services.conversation import _event_to_item
 
     source = RetrievedSource(
         chunk_id=CHUNK_A,

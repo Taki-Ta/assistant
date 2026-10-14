@@ -5,10 +5,10 @@ from uuid import UUID
 
 import pytest
 
-from interview_ai.agent.context.budget import ContextBudget, ContextBudgetExceeded
-from interview_ai.agent.context.estimator import estimate_request
-from interview_ai.agent.context.tool_output import ToolOutputBudget
-from interview_ai.agent.models import (
+from zhiyin.agent.context.budget import ContextBudget, ContextBudgetExceeded
+from zhiyin.agent.context.estimator import estimate_request
+from zhiyin.agent.context.tool_output import ToolOutputBudget
+from zhiyin.agent.models import (
     AgentMessage,
     AssistantMessageEvent,
     FunctionCallEvent,
@@ -17,17 +17,17 @@ from interview_ai.agent.models import (
     RetrievedSource,
     ToolExecutionResult,
 )
-from interview_ai.agent.providers.openai import (
+from zhiyin.agent.providers.openai import (
     ModelResponseError,
     OpenAIProvider,
     ToolCallLimitExceeded,
 )
-from interview_ai.agent.runtime import AgentContext, ToolDependencies
-from interview_ai.agent.tools.preferences import PreferenceTool
-from interview_ai.agent.tools.registry import ToolRegistry
-from interview_ai.agent.tools.search_knowledge import SearchKnowledgeTool
-from interview_ai.indexing.models import SearchResult
-from interview_ai.indexing.search_service import SearchService
+from zhiyin.agent.runtime import AgentContext, ToolDependencies
+from zhiyin.agent.tools.preferences import PreferenceTool
+from zhiyin.agent.tools.registry import ToolRegistry
+from zhiyin.agent.tools.search_knowledge import SearchKnowledgeTool
+from zhiyin.indexing.models import SearchResult
+from zhiyin.indexing.search_service import SearchService
 
 CHUNK_ID = UUID("01900000-0000-7000-8000-000000000001")
 DOCUMENT_ID = UUID("01900000-0000-7000-8000-000000000002")

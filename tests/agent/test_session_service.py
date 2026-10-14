@@ -5,10 +5,10 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid6 import uuid7
 
-from interview_ai.agent.repository import ConversationRepository
-from interview_ai.agent.services import SessionNotFoundError
-from interview_ai.agent.services.session import InvalidCursorError, SessionService
-from interview_ai.db.models import (
+from zhiyin.agent.repository import ConversationRepository
+from zhiyin.agent.services import SessionNotFoundError
+from zhiyin.agent.services.session import InvalidCursorError, SessionService
+from zhiyin.db.models import (
     Chunk,
     ConversationItem,
     ItemRole,

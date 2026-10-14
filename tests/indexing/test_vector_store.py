@@ -3,8 +3,8 @@ from uuid import UUID
 import pytest
 import pytest_asyncio
 
-from interview_ai.db.models import VectorRecord
-from interview_ai.indexing.vector_store import InMemoryVectorStore
+from zhiyin.db.models import VectorRecord
+from zhiyin.indexing.vector_store import InMemoryVectorStore
 
 TEST_DATA = [
     (

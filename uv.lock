@@ -338,7 +338,7 @@ wheels = [
 ]
 
 [[package]]
-name = "interview-ai"
+name = "zhiyin"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

@@ -2,9 +2,9 @@ import json
 
 from typer.testing import CliRunner
 
-from interview_ai.cli import app
-from interview_ai.ingestion.manifest import generate_manifest, save_manifest
-from interview_ai.ingestion.scanner import scan_path, split_document
+from zhiyin.cli import app
+from zhiyin.ingestion.manifest import generate_manifest, save_manifest
+from zhiyin.ingestion.scanner import scan_path, split_document
 
 runner = CliRunner()
 

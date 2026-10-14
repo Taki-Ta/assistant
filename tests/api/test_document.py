@@ -4,10 +4,10 @@ from uuid import UUID
 
 from fastapi.testclient import TestClient
 
-from interview_ai.api.app import create_app
-from interview_ai.api.auth import verify_bearer
-from interview_ai.db.database import get_db
-from interview_ai.db.models import Document
+from zhiyin.api.app import create_app
+from zhiyin.api.auth import verify_bearer
+from zhiyin.db.database import get_db
+from zhiyin.db.models import Document
 
 
 class _ScalarResult:
@@ -31,7 +31,7 @@ class _DatabaseSession:
         pass
 
     async def scalar(self, statement):
-        from interview_ai.db.models import KnowledgeBase
+        from zhiyin.db.models import KnowledgeBase
 
         return KnowledgeBase(owner_id="user-001", name="默认知识库")
 

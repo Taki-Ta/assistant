@@ -8,17 +8,17 @@ from pydantic import ValidationError
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from interview_ai.agent.context.budget import ContextBudget
-from interview_ai.agent.context.builder import ContextBuilder
-from interview_ai.agent.context.estimator import estimate_request
-from interview_ai.agent.preferences import (
+from zhiyin.agent.context.budget import ContextBudget
+from zhiyin.agent.context.builder import ContextBuilder
+from zhiyin.agent.context.estimator import estimate_request
+from zhiyin.agent.preferences import (
     ForgetPreferenceArguments,
     PreferenceService,
     RememberPreferenceArguments,
 )
-from interview_ai.agent.runtime import AgentContext, ToolDependencies
-from interview_ai.agent.tools.preferences import PreferenceTool
-from interview_ai.db.models import ConversationItem, ItemRole, ItemType
+from zhiyin.agent.runtime import AgentContext, ToolDependencies
+from zhiyin.agent.tools.preferences import PreferenceTool
+from zhiyin.db.models import ConversationItem, ItemRole, ItemType
 
 
 def service():

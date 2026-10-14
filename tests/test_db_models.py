@@ -1,6 +1,6 @@
 from uuid import NAMESPACE_URL, uuid5
 
-from interview_ai.db.models import Chunk, Document, VectorRecord
+from zhiyin.db.models import Chunk, Document, VectorRecord
 
 
 def test_document_id_is_generated_as_uuid7() -> None:

@@ -1,0 +1,105 @@
+from uuid import UUID
+
+from sqlalchemy import delete, func, select
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from zhiyin.db.knowledge_bases import document_access
+from zhiyin.db.models import Chunk, Document, VectorRecord
+
+from ..models import SearchResult
+
+
+class PostgresVectorStore:
+    """使用 PostgreSQL pgvector 保存和检索 Chunk 向量。"""
+
+    def __init__(self, db: AsyncSession) -> None:
+        self._db = db
+
+    async def upsert(self, records: list[VectorRecord]) -> None:
+        if not records:
+            return
+
+        values = [
+            {
+                "chunk_id": record.chunk_id,
+                "vector": record.vector,
+                "embedding_model": record.embedding_model,
+            }
+            for record in records
+        ]
+        statement = insert(VectorRecord).values(values)
+        statement = statement.on_conflict_do_update(
+            index_elements=[VectorRecord.chunk_id],
+            set_={
+                "vector": statement.excluded.vector,
+                "embedding_model": statement.excluded.embedding_model,
+                "updated_at": func.now(),
+            },
+        )
+        await self._db.execute(statement)
+
+    async def delete(self, chunk_ids: list[UUID]) -> None:
+        if not chunk_ids:
+            return
+        await self._db.execute(
+            delete(VectorRecord).where(VectorRecord.chunk_id.in_(chunk_ids))
+        )
+
+    async def search(
+        self,
+        query_vector: list[float],
+        *,
+        owner_id: str,
+        limit: int = 5,
+        score_threshold: float | None = None,
+    ) -> list[SearchResult]:
+        if limit <= 0:
+            raise ValueError("limit 必须大于 0")
+        if score_threshold is not None and not 0 <= score_threshold <= 1:
+            raise ValueError("score_threshold 必须在 0 到 1 之间")
+
+        distance = VectorRecord.vector.cosine_distance(query_vector)
+        statement = (
+            select(
+                VectorRecord.chunk_id,
+                Chunk.document_id,
+                Document.name,
+                Chunk.headings,
+                Chunk.content,
+                Chunk.start_line,
+                Chunk.end_line,
+                distance.label("distance"),
+            )
+            .select_from(VectorRecord)
+            .join(Chunk, VectorRecord.chunk_id == Chunk.id)
+            .join(Document, Chunk.document_id == Document.id)
+            .where(document_access(owner_id))
+            .order_by(distance)
+            .limit(limit)
+        )
+        if score_threshold is not None:
+            statement = statement.where(distance <= 1.0 - score_threshold)
+        rows = (await self._db.execute(statement)).all()
+        return [
+            SearchResult(
+                chunk_id=chunk_id,
+                document_id=document_id,
+                document_name=document_name,
+                headings=tuple(headings),
+                content=content,
+                start_line=start_line,
+                end_line=end_line,
+                score=1.0 - float(distance_value),
+            )
+            for (
+                chunk_id,
+                document_id,
+                document_name,
+                headings,
+                content,
+                start_line,
+                end_line,
+                distance_value,
+            ) in rows
+        ]

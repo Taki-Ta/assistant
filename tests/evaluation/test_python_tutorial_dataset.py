@@ -3,9 +3,9 @@ import json
 from collections import Counter
 from pathlib import Path
 
-from interview_ai.db.models import Document
-from interview_ai.evaluation.dataset import load_retrieval_cases
-from interview_ai.ingestion.scanner import split_document
+from zhiyin.db.models import Document
+from zhiyin.evaluation.dataset import load_retrieval_cases
+from zhiyin.ingestion.scanner import split_document
 
 DATASET_ROOT = Path(__file__).parents[2] / "evals" / "python_tutorial"
 CORPUS_ROOT = DATASET_ROOT / "corpus"

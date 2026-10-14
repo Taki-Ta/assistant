@@ -3,11 +3,11 @@ from uuid import UUID
 
 from fastapi.testclient import TestClient
 
-from interview_ai.api.app import create_app
-from interview_ai.api.auth import verify_bearer
-from interview_ai.api.dependencies import get_search_service
-from interview_ai.indexing.models import SearchResult
-from interview_ai.indexing.search_service import SearchService
+from zhiyin.api.app import create_app
+from zhiyin.api.auth import verify_bearer
+from zhiyin.api.dependencies import get_search_service
+from zhiyin.indexing.models import SearchResult
+from zhiyin.indexing.search_service import SearchService
 
 
 def _service() -> AsyncMock:

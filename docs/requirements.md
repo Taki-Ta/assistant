@@ -114,7 +114,7 @@ GET  /health                健康检查
 
 ### NFR-01 可维护性
 
-- 使用 `src/interview_ai` 包结构。
+- 使用 `src/zhiyin` 包结构。
 - 对外函数和 API 模型使用类型注解。
 - 模型供应商、Embedding 和向量存储通过接口隔离。
 - 第一版直接使用模型官方 SDK，不引入 LangChain。

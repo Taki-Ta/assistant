@@ -31,7 +31,7 @@
 - [x] 使用 uv 管理项目和开发依赖（2%）
 - [x] 配置 pytest 并成功运行示例测试（2%）
 - [x] 配置 Ruff 并通过现有示例代码检查（2%）
-- [ ] 建立 `src/interview_ai` 包及分层目录（2%）
+- [ ] 建立 `src/zhiyin` 包及分层目录（2%）
 - [ ] 增加配置加载、`.env.example` 和统一日志（2%）
 
 验收命令：
@@ -127,7 +127,7 @@ uv run ruff format --check .
 
 下一次实现从 P0 剩余任务开始：
 
-1. 创建 `src/interview_ai` 包。
+1. 创建 `src/zhiyin` 包。
 2. 建立 `config.py`、`logging.py` 和测试目录。
 3. 添加 `.env.example`，明确数据目录和模型配置。
 4. 通过 P0 的全部验收命令，将总进度更新为 10%。

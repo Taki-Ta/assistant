@@ -3,7 +3,7 @@ from uuid import UUID
 import pytest
 from pydantic import ValidationError
 
-from interview_ai.api.schemas import ChatRequest, ChatResponse
+from zhiyin.api.schemas import ChatRequest, ChatResponse
 
 SESSION_ID = UUID("01900000-0000-7000-8000-000000000010")
 

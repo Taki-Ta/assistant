@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from interview_ai.api.dependencies import (
+from zhiyin.api.dependencies import (
     ConversationDatabaseSession,
     DatabaseSession,
 )
-from interview_ai.db import database
+from zhiyin.db import database
 
 
 def test_conversation_and_request_dependencies_use_different_sessions(

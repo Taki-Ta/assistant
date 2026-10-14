@@ -3,8 +3,8 @@ from unittest.mock import AsyncMock, Mock
 
 from typer.testing import CliRunner
 
-from interview_ai.cli import app
-from interview_ai.evaluation.models import (
+from zhiyin.cli import app
+from zhiyin.evaluation.models import (
     RetrievalMetrics,
     RetrievalReport,
 )
@@ -31,8 +31,8 @@ def test_eval_retrieval_prints_metrics_and_saves_report(monkeypatch, tmp_path) -
     )
     run_evaluation = AsyncMock(return_value=report)
     save_report = Mock()
-    monkeypatch.setattr("interview_ai.cli.run_retrieval_evaluation", run_evaluation)
-    monkeypatch.setattr("interview_ai.cli.save_retrieval_report", save_report)
+    monkeypatch.setattr("zhiyin.cli.run_retrieval_evaluation", run_evaluation)
+    monkeypatch.setattr("zhiyin.cli.save_retrieval_report", save_report)
     report_path = tmp_path / "report.json"
 
     result = runner.invoke(

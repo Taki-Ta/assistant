@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from interview_ai.indexing.search_service import SearchService
+from zhiyin.indexing.search_service import SearchService
 
 
 @pytest.mark.asyncio
