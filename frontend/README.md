@@ -1,4 +1,4 @@
-# 知页 · 知识库助手前端
+# 知引 · 知识库助手前端
 
 React + TypeScript + Vite + Tailwind CSS，调用仓库中的 FastAPI 接口。
 

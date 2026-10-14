@@ -48,7 +48,7 @@ export function Sidebar({
             <BookOpen size={18} strokeWidth={1.6} />
           </div>
           <span className="text-lg font-semibold tracking-tight">
-            知页<span className="ml-2 text-xs font-normal text-stone-400">ZHIYE</span>
+            知引<span className="ml-2 text-xs font-normal text-stone-400">ZHIYIN</span>
           </span>
           <button aria-label="关闭会话列表" className="ml-auto md:hidden" onClick={onClose}>
             <X size={18} />
