@@ -4,10 +4,10 @@ from uuid import UUID
 
 import pytest
 
-from interview_ai.evaluation.dataset import load_retrieval_cases
-from interview_ai.evaluation.evaluator import evaluate_retrieval
-from interview_ai.evaluation.models import RetrievalCase
-from interview_ai.indexing.models import SearchResult
+from zhiyin.evaluation.dataset import load_retrieval_cases
+from zhiyin.evaluation.evaluator import evaluate_retrieval
+from zhiyin.evaluation.models import RetrievalCase
+from zhiyin.indexing.models import SearchResult
 
 
 class _Searcher:

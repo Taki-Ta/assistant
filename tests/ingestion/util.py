@@ -2,7 +2,7 @@ import hashlib
 from datetime import UTC, datetime
 from pathlib import Path
 
-from interview_ai.ingestion.models import LocalDocument
+from zhiyin.ingestion.models import LocalDocument
 
 
 def make_file(content: str, path: Path | None = None) -> LocalDocument:

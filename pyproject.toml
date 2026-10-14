@@ -1,7 +1,7 @@
 [project]
-name = "interview_ai"
+name = "zhiyin"
 version = "0.1.0"
-description = "Add your description here"
+description = "Markdown knowledge-base RAG assistant with streaming chat and traceable sources"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
@@ -57,7 +57,7 @@ docstring-code-format = false
 
 
 [project.scripts]
-interview_ai = "interview_ai.cli:app"
+zhiyin = "zhiyin.cli:app"
 
 
 [build-system]

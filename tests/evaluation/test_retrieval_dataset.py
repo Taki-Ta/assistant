@@ -3,8 +3,8 @@ import re
 from hashlib import sha256
 from pathlib import Path
 
-from interview_ai.db.models import Document
-from interview_ai.ingestion.scanner import split_document
+from zhiyin.db.models import Document
+from zhiyin.ingestion.scanner import split_document
 
 DATASET_ROOT = Path(__file__).parents[2] / "evals" / "retrieval"
 QUESTIONS_PATH = DATASET_ROOT / "questions.jsonl"

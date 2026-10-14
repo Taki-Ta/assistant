@@ -4,8 +4,8 @@ from uuid import UUID
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from interview_ai.agent.repository import ConversationRepository
-from interview_ai.db.models import ConversationItem, ItemRole, ItemType
+from zhiyin.agent.repository import ConversationRepository
+from zhiyin.db.models import ConversationItem, ItemRole, ItemType
 
 SESSION_ID = UUID("01900000-0000-7000-8000-000000000010")
 TURN_ID = UUID("01900000-0000-7000-8000-000000000011")
@@ -160,7 +160,7 @@ async def test_display_history_keeps_all_turn_statuses_and_excludes_internal_ite
 
 @pytest.mark.asyncio
 async def test_soft_delete_preserves_history_and_does_not_commit():
-    from interview_ai.db.models import Session
+    from zhiyin.db.models import Session
 
     db = MagicMock(spec=AsyncSession)
     db.flush = AsyncMock()

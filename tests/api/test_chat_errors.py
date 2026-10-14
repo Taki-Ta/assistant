@@ -4,14 +4,14 @@ import pytest
 from fastapi import HTTPException
 from openai import OpenAIError
 
-from interview_ai.agent.context.budget import (
+from zhiyin.agent.context.budget import (
     CompactionError,
     ContextBudgetExceeded,
     InputTooLarge,
 )
-from interview_ai.agent.providers.openai import ModelResponseError
-from interview_ai.api.routes.ai import chat
-from interview_ai.api.schemas import ChatRequest
+from zhiyin.agent.providers.openai import ModelResponseError
+from zhiyin.api.routes.ai import chat
+from zhiyin.api.schemas import ChatRequest
 
 
 @pytest.mark.asyncio

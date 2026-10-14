@@ -4,8 +4,8 @@ import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
-from interview_ai.db.knowledge_bases import accessible_knowledge_bases, document_access
-from interview_ai.db.models import Document, KnowledgeBase, KnowledgeBaseMember
+from zhiyin.db.knowledge_bases import accessible_knowledge_bases, document_access
+from zhiyin.db.models import Document, KnowledgeBase, KnowledgeBaseMember
 
 
 @pytest.fixture

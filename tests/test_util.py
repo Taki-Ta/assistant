@@ -3,8 +3,8 @@ from datetime import UTC, datetime, timedelta
 import jwt
 import pytest
 
-from interview_ai.config import config
-from interview_ai.util import JWT_ALGORITHM, jwt_encode, jwt_verify
+from zhiyin.config import config
+from zhiyin.util import JWT_ALGORITHM, jwt_encode, jwt_verify
 
 
 @pytest.fixture(autouse=True)

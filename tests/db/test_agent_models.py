@@ -1,4 +1,4 @@
-from interview_ai.db.models import (
+from zhiyin.db.models import (
     ConversationItem,
     ItemRole,
     ItemType,

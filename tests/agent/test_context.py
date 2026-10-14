@@ -5,19 +5,19 @@ import pytest
 from openai.types.responses import ResponseFunctionToolCall
 from uuid6 import uuid7
 
-from interview_ai.agent.context.budget import (
+from zhiyin.agent.context.budget import (
     CompactionError,
     ContextBudget,
     ContextBudgetExceeded,
 )
-from interview_ai.agent.context.builder import ContextBuilder
-from interview_ai.agent.context.compactor import (
+from zhiyin.agent.context.builder import ContextBuilder
+from zhiyin.agent.context.compactor import (
     COMPACTION_INSTRUCTIONS,
     compact_history,
 )
-from interview_ai.agent.context.estimator import estimate_request, estimate_text
-from interview_ai.agent.models import AgentMessage
-from interview_ai.db.models import ConversationItem, ItemRole, ItemType
+from zhiyin.agent.context.estimator import estimate_request, estimate_text
+from zhiyin.agent.models import AgentMessage
+from zhiyin.db.models import ConversationItem, ItemRole, ItemType
 
 
 def test_text_estimate_handles_empty_ascii_chinese_and_mixed_text():

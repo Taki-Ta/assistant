@@ -1,7 +1,7 @@
 import pytest
 
-from interview_ai.ingestion.scanner import split_document
 from tests.ingestion.util import make_file
+from zhiyin.ingestion.scanner import split_document
 
 
 def test_split_document_uses_headings_and_keeps_source_lines():

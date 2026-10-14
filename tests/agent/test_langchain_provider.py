@@ -11,8 +11,8 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from pydantic import Field
 
-from interview_ai.agent.context.budget import ContextBudget, ContextBudgetExceeded
-from interview_ai.agent.models import (
+from zhiyin.agent.context.budget import ContextBudget, ContextBudgetExceeded
+from zhiyin.agent.models import (
     AgentMessage,
     AssistantMessageEvent,
     AssistantTextDeltaEvent,
@@ -20,15 +20,15 @@ from interview_ai.agent.models import (
     FunctionCallOutputEvent,
     ModelCompletedEvent,
 )
-from interview_ai.agent.providers.langchain import LangChainProvider
-from interview_ai.agent.providers.openai import (
+from zhiyin.agent.providers.langchain import LangChainProvider
+from zhiyin.agent.providers.openai import (
     ModelResponseError,
     ToolCallLimitExceeded,
 )
-from interview_ai.agent.runtime import AgentContext, ToolDependencies
-from interview_ai.agent.services.conversation import _event_to_item
-from interview_ai.db.models import ItemType
-from interview_ai.indexing.models import SearchResult
+from zhiyin.agent.runtime import AgentContext, ToolDependencies
+from zhiyin.agent.services.conversation import _event_to_item
+from zhiyin.db.models import ItemType
+from zhiyin.indexing.models import SearchResult
 
 
 class ScriptedModel(BaseChatModel):
@@ -357,7 +357,7 @@ async def test_closing_consumer_closes_agent_stream():
     context, dependencies = runtime()
     model = ScriptedModel(responses=[])
     with patch(
-        "interview_ai.agent.providers.langchain.create_agent",
+        "zhiyin.agent.providers.langchain.create_agent",
         return_value=SimpleNamespace(astream=stream),
     ):
         events = LangChainProvider(model=model).generate(
@@ -428,10 +428,10 @@ async def test_provider_completes_through_conversation_service():
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
-    from interview_ai.agent.context.builder import ContextBuilder
-    from interview_ai.agent.repository import ConversationRepository
-    from interview_ai.agent.services.conversation import ConversationService
-    from interview_ai.db.models import Session, Turn
+    from zhiyin.agent.context.builder import ContextBuilder
+    from zhiyin.agent.repository import ConversationRepository
+    from zhiyin.agent.services.conversation import ConversationService
+    from zhiyin.db.models import Session, Turn
 
     context, dependencies = runtime()
     provider = LangChainProvider(
@@ -475,9 +475,7 @@ async def test_summary_and_lifecycle_delegate_to_existing_bounded_provider():
     summary = SimpleNamespace(
         summarize_history=AsyncMock(return_value="摘要"), aclose=AsyncMock()
     )
-    with patch(
-        "interview_ai.agent.providers.langchain.OpenAIProvider", return_value=summary
-    ):
+    with patch("zhiyin.agent.providers.langchain.OpenAIProvider", return_value=summary):
         async with LangChainProvider(model=model) as provider:
             messages = [AgentMessage("user", "历史")]
             assert (
@@ -493,7 +491,7 @@ async def test_summary_and_lifecycle_delegate_to_existing_bounded_provider():
 async def test_default_model_clients_survive_other_provider_closing(
     monkeypatch, overlap
 ):
-    from interview_ai.config import config
+    from zhiyin.config import config
 
     monkeypatch.setattr(config, "chat_api_key", "test-key")
     monkeypatch.setattr(config, "chat_api_host", "https://model.example.test/v1")

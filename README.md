@@ -58,6 +58,8 @@ React 前端连接 FastAPI 后端，使用兼容 OpenAI 的 Embedding 与 Respon
 需要 Python 3.12、[uv](https://docs.astral.sh/uv/)、Node.js 22.12+、
 带 pgvector 扩展的 PostgreSQL，以及支持函数调用和流式响应的 OpenAI 兼容服务。
 
+升级已有安装后先运行 `uv sync --dev`：Python 导入包和 CLI 命令现已统一为 `zhiyin`，源码目录为 `src/zhiyin/`。现有 `DATABASE_URL` 和数据库无需改名。
+
 ### 1. 配置并启动后端
 
 在仓库根目录执行：
@@ -76,8 +78,8 @@ macOS / Linux 使用 `cp .env.example .env`。
 
 ```powershell
 psql -d "postgresql://postgres:postgres@localhost:5432/interview_ai" `
-  -f src/interview_ai/migration/init_sql
-uv run fastapi dev src/interview_ai/api/app.py
+  -f src/zhiyin/migration/init_sql
+uv run fastapi dev src/zhiyin/api/app.py
 ```
 
 数据库需提前创建；连接地址应与 `.env` 一致。已有数据库按指南应用尚未执行的迁移。
@@ -101,7 +103,7 @@ npm run dev
 在根目录生成本地开发 Token：
 
 ```powershell
-uv run python -c "from interview_ai.util import jwt_encode; print(jwt_encode({'sub': 'demo-user'}))"
+uv run python -c "from zhiyin.util import jwt_encode; print(jwt_encode({'sub': 'demo-user'}))"
 ```
 
 在页面「我的工作空间」设置中填写 Token。凭证保存在 `sessionStorage`，
@@ -144,7 +146,7 @@ npm run format:check
 
 ```text
 frontend/           知引 · React / TypeScript / Vite 前端
-src/interview_ai/   FastAPI、会话服务、检索、摄取与数据库迁移
+src/zhiyin/         FastAPI、会话服务、检索、摄取与数据库迁移
 evals/              版本化检索语料与评测问题
 scripts/            数据集、评测与 README 截图脚本
 tests/              后端单元、API、数据库与集成测试

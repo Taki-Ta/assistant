@@ -5,10 +5,10 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from interview_ai.api.app import create_app
-from interview_ai.api.auth import verify_bearer
-from interview_ai.db.database import get_db
-from interview_ai.db.models import KnowledgeBase
+from zhiyin.api.app import create_app
+from zhiyin.api.auth import verify_bearer
+from zhiyin.db.database import get_db
+from zhiyin.db.models import KnowledgeBase
 
 
 def client(db, user="owner"):

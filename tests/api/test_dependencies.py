@@ -4,12 +4,12 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from interview_ai.api import dependencies
-from interview_ai.api.dependencies import (
+from zhiyin.api import dependencies
+from zhiyin.api.dependencies import (
     ConversationDatabaseSession,
     DatabaseSession,
 )
-from interview_ai.db import database
+from zhiyin.db import database
 
 
 @pytest.mark.asyncio
@@ -17,7 +17,7 @@ from interview_ai.db import database
 async def test_conversation_provider_selection_preserves_context_builder(
     monkeypatch, provider_name
 ):
-    from interview_ai.agent.providers import langchain
+    from zhiyin.agent.providers import langchain
 
     provider = MagicMock()
     provider_context = MagicMock()

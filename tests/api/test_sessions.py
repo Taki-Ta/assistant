@@ -5,18 +5,18 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from uuid6 import uuid7
 
-from interview_ai.agent.runtime import AgentContext
-from interview_ai.agent.services import SessionNotFoundError
-from interview_ai.agent.services.session import (
+from zhiyin.agent.runtime import AgentContext
+from zhiyin.agent.services import SessionNotFoundError
+from zhiyin.agent.services.session import (
     InvalidCursorError,
     SessionPage,
     SessionService,
     TurnPage,
     TurnRecord,
 )
-from interview_ai.api.dependencies import get_agent_context, get_session_service
-from interview_ai.api.routes.session import router
-from interview_ai.db.models import (
+from zhiyin.api.dependencies import get_agent_context, get_session_service
+from zhiyin.api.routes.session import router
+from zhiyin.db.models import (
     ConversationItem,
     ItemRole,
     ItemType,
@@ -241,7 +241,7 @@ def test_turn_cursor_outside_database_integer_range_is_rejected():
 
 
 def test_token_without_subject_is_rejected():
-    from interview_ai.api.auth import verify_bearer
+    from zhiyin.api.auth import verify_bearer
 
     service = AsyncMock(spec=SessionService)
     client = client_for(service, authenticated=False)

@@ -4,9 +4,9 @@ import jwt
 import pytest
 from fastapi.testclient import TestClient
 
-from interview_ai.api.app import create_app
-from interview_ai.config import config
-from interview_ai.util import JWT_ALGORITHM, jwt_encode
+from zhiyin.api.app import create_app
+from zhiyin.config import config
+from zhiyin.util import JWT_ALGORITHM, jwt_encode
 
 
 @pytest.fixture

@@ -8,22 +8,22 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from starlette.requests import ClientDisconnect
 
-from interview_ai.agent.models import (
+from zhiyin.agent.models import (
     AssistantTextDeltaEvent,
     ChatCompletedEvent,
     ChatStartedEvent,
     FunctionCallEvent,
     FunctionCallOutputEvent,
 )
-from interview_ai.agent.providers.openai import ModelResponseError
-from interview_ai.agent.services import SessionNotFoundError
-from interview_ai.api.dependencies import (
+from zhiyin.agent.providers.openai import ModelResponseError
+from zhiyin.agent.services import SessionNotFoundError
+from zhiyin.api.dependencies import (
     get_agent_context,
     get_conversation_service,
     get_tool_dependencies,
 )
-from interview_ai.api.routes.ai import chat_stream, router
-from interview_ai.api.schemas import ChatRequest
+from zhiyin.api.routes.ai import chat_stream, router
+from zhiyin.api.schemas import ChatRequest
 
 SESSION_ID = UUID("01900000-0000-7000-8000-000000000010")
 TURN_ID = UUID("01900000-0000-7000-8000-000000000011")
@@ -178,9 +178,7 @@ async def test_response_send_failure_closes_primed_generator(fail_at):
 async def test_heartbeats_keep_waiting_on_same_event_without_cancelling_work(
     monkeypatch,
 ):
-    monkeypatch.setattr(
-        "interview_ai.api.routes.ai.SSE_HEARTBEAT_INTERVAL_SECONDS", 0.01
-    )
+    monkeypatch.setattr("zhiyin.api.routes.ai.SSE_HEARTBEAT_INTERVAL_SECONDS", 0.01)
     service = MagicMock()
     release = asyncio.Event()
     readers = []
@@ -226,9 +224,7 @@ async def test_heartbeats_keep_waiting_on_same_event_without_cancelling_work(
 async def test_disconnect_during_heartbeat_cancels_reader_and_closes_session(
     monkeypatch,
 ):
-    monkeypatch.setattr(
-        "interview_ai.api.routes.ai.SSE_HEARTBEAT_INTERVAL_SECONDS", 0.01
-    )
+    monkeypatch.setattr("zhiyin.api.routes.ai.SSE_HEARTBEAT_INTERVAL_SECONDS", 0.01)
     service = MagicMock()
     readers = []
     closed = False

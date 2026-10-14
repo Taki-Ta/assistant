@@ -40,7 +40,7 @@ uv run python scripts/build_learn_py_corpus.py `
 ## 运行评测
 
 ```powershell
-uv run interview_ai eval-retrieval `
+uv run zhiyin eval-retrieval `
   --dataset evals/python_tutorial `
   --limit 5 `
   --report evals/python_tutorial/reports/baseline.json

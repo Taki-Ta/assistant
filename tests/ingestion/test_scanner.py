@@ -1,6 +1,6 @@
 import string
 
-from interview_ai.ingestion.scanner import (
+from zhiyin.ingestion.scanner import (
     IGNORE_DIRS,
     get_file_info_from_path,
     scan_path,

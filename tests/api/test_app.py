@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
-from interview_ai.api.app import create_app
-from interview_ai.config import config
+from zhiyin.api.app import create_app
+from zhiyin.config import config
 
 
 def test_public_system_endpoints_are_available():

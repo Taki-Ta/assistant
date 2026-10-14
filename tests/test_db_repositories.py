@@ -4,8 +4,8 @@ from uuid import NAMESPACE_URL, uuid5
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from interview_ai.db.models import Chunk
-from interview_ai.db.repositories import PostgresChunkStore
+from zhiyin.db.models import Chunk
+from zhiyin.db.repositories import PostgresChunkStore
 
 
 def _chunk(document_id):

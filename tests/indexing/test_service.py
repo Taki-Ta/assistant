@@ -2,14 +2,14 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from interview_ai.indexing.protocols import (
+from tests.ingestion.util import make_file
+from zhiyin.indexing.protocols import (
     ChunkStore,
     EmbeddingProvider,
     VectorStore,
 )
-from interview_ai.indexing.service import IndexService
-from interview_ai.ingestion.scanner import split_document
-from tests.ingestion.util import make_file
+from zhiyin.indexing.service import IndexService
+from zhiyin.ingestion.scanner import split_document
 
 
 def make_service(vectors):
