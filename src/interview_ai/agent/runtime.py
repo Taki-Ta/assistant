@@ -18,6 +18,9 @@ class LangChainAgentContext:
     owner_id: str
     search_service: SearchService
     output_budget: ToolOutputBudget | None
+    preference_service: PreferenceService | None = None
+    turn_id: UUID | None = None
+    user_input: str = ""
 
 
 @dataclass(frozen=True, slots=True)

@@ -83,6 +83,51 @@ def runtime(search=None):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("forget", [False, True])
+async def test_preference_tools_receive_authenticated_current_turn(forget):
+    preference_service = SimpleNamespace(
+        change=AsyncMock(return_value='{"status":"saved"}')
+    )
+    arguments = {"key": "code_language", "evidence": "以后用 Python"}
+    if not forget:
+        arguments["value"] = "Python"
+    model = ScriptedModel(
+        responses=[
+            model_message(
+                "",
+                1,
+                [
+                    {
+                        "id": "preference-1",
+                        "name": "forget_preference"
+                        if forget
+                        else "remember_preference",
+                        "args": arguments,
+                    }
+                ],
+            ),
+            model_message("已处理", 2),
+        ]
+    )
+    provider = LangChainProvider(model=model)
+    context = AgentContext("alice", UUID(int=1), "以后用 Python")
+    events = [
+        event
+        async for event in provider.generate(
+            [AgentMessage("user", context.user_input)],
+            context,
+            ToolDependencies(SimpleNamespace(), preference_service),
+        )
+    ]
+    args = preference_service.change.await_args.args
+    assert args[:3] == ("alice", UUID(int=1), "以后用 Python")
+    assert args[3].key == "code_language"
+    assert next(
+        event for event in events if isinstance(event, FunctionCallOutputEvent)
+    ).succeeded
+
+
+@pytest.mark.asyncio
 async def test_real_agent_tool_loop_maps_history_sources_usage_and_database_items():
     source = SearchResult(
         chunk_id=UUID(int=1),

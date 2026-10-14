@@ -617,7 +617,7 @@ uv run ruff format --check src tests
 
 执行增量迁移 `src/interview_ai/migration/003_create_user_preferences.sql` 后，
 可以在聊天中说“以后代码示例默认用 Python”“记住，回答尽量简洁”，或要求忘记某项偏好。
-OpenAI Provider 支持 `remember_preference`、`forget_preference` 工具。
+OpenAI 和 LangChain Provider 都支持 `remember_preference`、`forget_preference` 工具。
 目前支持回答语言、回答详细程度和代码示例语言，按用户隔离并记录来源轮次。
 每轮自动加载已保存偏好，新会话也生效；当前明确要求优先于默认偏好。
 偏好作为可选背景计入输入预算，空间不足时省略，不参与历史摘要。

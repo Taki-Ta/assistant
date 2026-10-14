@@ -44,6 +44,10 @@ from interview_ai.agent.runtime import (
     LangChainAgentContext,
     ToolDependencies,
 )
+from interview_ai.agent.tools.langchain_preferences import (
+    forget_preference,
+    remember_preference,
+)
 from interview_ai.agent.tools.search_knowledge import search_knowledgebase
 from interview_ai.config import config
 
@@ -219,8 +223,13 @@ class LangChainProvider:
             self._model.root_client.close()
 
     def tool_definitions(self) -> list:
-        function = convert_to_openai_tool(search_knowledgebase, strict=True)["function"]
-        return [{"type": "function", **function}]
+        return [
+            {
+                "type": "function",
+                **convert_to_openai_tool(tool, strict=True)["function"],
+            }
+            for tool in [search_knowledgebase, remember_preference, forget_preference]
+        ]
 
     async def summarize_history(
         self, messages: Sequence[AgentMessage], *, max_output_tokens: int
@@ -246,7 +255,7 @@ class LangChainProvider:
         )
         agent = create_agent(
             model=self._model,
-            tools=[search_knowledgebase],
+            tools=[search_knowledgebase, remember_preference, forget_preference],
             system_prompt=INSTRUCTIONS if instructions is None else instructions,
             context_schema=LangChainAgentContext,
             middleware=[middleware],
@@ -255,6 +264,9 @@ class LangChainProvider:
             owner_id=context.owner_id,
             search_service=dependencies.search_service,
             output_budget=None,
+            preference_service=dependencies.preference_service,
+            turn_id=context.turn_id,
+            user_input=context.user_input,
         )
         usage = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
         seen = set()
