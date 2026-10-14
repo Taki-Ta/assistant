@@ -187,14 +187,15 @@ async def test_touch_session_updates_only_timestamp_not_deleted_flag():
 
 
 @pytest.mark.asyncio
-async def test_legacy_source_lookup_is_scoped_to_document_owner():
+async def test_legacy_source_lookup_is_scoped_to_knowledge_base_access():
     db = MagicMock(spec=AsyncSession)
     db.execute = AsyncMock(return_value=[])
     repository = ConversationRepository(db)
     assert await repository.list_source_chunks([TURN_ID], "owner") == []
     statement = db.execute.await_args.args[0]
     assert "JOIN documents" in str(statement)
-    assert "documents.owner_id =" in str(statement)
+    assert "documents.knowledge_base_id IN" in str(statement)
+    assert "knowledge_base_members.user_id =" in str(statement)
     assert "owner" in statement.compile().params.values()
     db.execute.reset_mock()
     assert await repository.list_source_chunks([], "owner") == []

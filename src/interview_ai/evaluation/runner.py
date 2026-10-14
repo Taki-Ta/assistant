@@ -7,6 +7,7 @@ from sqlalchemy import delete
 
 from interview_ai.config import config
 from interview_ai.db.database import session_factory
+from interview_ai.db.knowledge_bases import KnowledgeBaseService
 from interview_ai.db.models import Document, DocumentStatus
 from interview_ai.db.repositories import PostgresChunkStore
 from interview_ai.indexing.embedding import OpenAIEmbeddingProvider
@@ -59,11 +60,15 @@ async def run_retrieval_evaluation(
             await db.execute(
                 delete(Document).where(Document.owner_id == EVALUATION_OWNER_ID)
             )
+            knowledge_base_id = await KnowledgeBaseService(db).default_id(
+                EVALUATION_OWNER_ID
+            )
             for corpus_path in corpus_paths:
                 content_bytes = corpus_path.read_bytes()
                 content = content_bytes.decode("utf-8-sig")
                 document = Document(
                     owner_id=EVALUATION_OWNER_ID,
+                    knowledge_base_id=knowledge_base_id,
                     name=corpus_path.name,
                     content=content,
                     content_hash=hashlib.sha256(content_bytes).hexdigest(),

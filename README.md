@@ -605,6 +605,14 @@ uv run ruff format --check src tests
 
 标记为 `network` 的测试需要可用的外部服务配置。
 
+### 知识库层级与权限
+
+知识库采用虚拟根节点 → 知识库 → 文档 → 分段的层级，分段关联向量索引。
+执行 `004_create_knowledge_bases.sql` 将已有文档回填到各用户的默认知识库；
+文档访问、索引、检索和旧来源回查按知识库角色授权，支持 owner/admin/editor/viewer。
+新上传可指定知识库，省略时使用默认知识库。
+迁移顺序、接口及权限说明见 [知识库结构与权限](docs/知识库结构与权限.md)。
+
 ### 用户偏好
 
 执行增量迁移 `src/interview_ai/migration/003_create_user_preferences.sql` 后，

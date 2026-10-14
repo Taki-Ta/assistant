@@ -1,6 +1,7 @@
 import hashlib
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock
+from uuid import UUID
 
 from fastapi.testclient import TestClient
 
@@ -35,6 +36,7 @@ def _document() -> Document:
     now = datetime.now(UTC)
     return Document(
         owner_id="user-001",
+        knowledge_base_id=UUID(int=1),
         name="python.md",
         content=content,
         content_hash=hashlib.sha256(content.encode()).hexdigest(),

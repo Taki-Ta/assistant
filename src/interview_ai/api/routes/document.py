@@ -4,10 +4,11 @@ from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 from sqlalchemy import select
 
-from interview_ai.db.models import Document, DocumentStatus
+from interview_ai.db.knowledge_bases import KnowledgeBaseService, document_access
+from interview_ai.db.models import Chunk, Document, DocumentStatus
 from interview_ai.ingestion.scanner import split_document
 
 from ..dependencies import Claims, DatabaseSession, IndexServiceDependency
@@ -29,12 +30,16 @@ def _owner_id(claims: dict[str, object]) -> str:
 
 
 @router.get("", response_model=list[Document], status_code=status.HTTP_200_OK)
-async def get_documents(claims: Claims, db: DatabaseSession) -> list[Document]:
+async def get_documents(
+    claims: Claims, db: DatabaseSession, knowledge_base_id: UUID | None = None
+) -> list[Document]:
     stmt = (
         select(Document)
-        .where(Document.owner_id == _owner_id(claims))
+        .where(document_access(_owner_id(claims)))
         .order_by(Document.updated_at.desc())
     )
+    if knowledge_base_id is not None:
+        stmt = stmt.where(Document.knowledge_base_id == knowledge_base_id)
     items = (await db.scalars(stmt)).all()
     return [
         item.model_copy(
@@ -53,6 +58,7 @@ async def add_document(
     file: Annotated[UploadFile, File(description="UTF-8 Markdown 文件")],
     claims: Claims,
     db: DatabaseSession,
+    knowledge_base_id: Annotated[UUID | None, Form()] = None,
 ) -> Document:
     filename = Path(file.filename or "").name
     if not filename or Path(filename).suffix.lower() != ".md":
@@ -76,8 +82,18 @@ async def add_document(
             detail="Markdown 文件必须使用 UTF-8 编码",
         ) from exc
 
+    owner_id = _owner_id(claims)
+    knowledge_bases = KnowledgeBaseService(db)
+    try:
+        if knowledge_base_id is None:
+            knowledge_base_id = await knowledge_bases.default_id(owner_id)
+        else:
+            await knowledge_bases.require(owner_id, knowledge_base_id, "edit")
+    except LookupError as exc:
+        raise HTTPException(404, detail=str(exc)) from exc
     document = Document(
-        owner_id=_owner_id(claims),
+        owner_id=owner_id,
+        knowledge_base_id=knowledge_base_id,
         name=filename,
         content=content,
         content_hash=hashlib.sha256(content_bytes).hexdigest(),
@@ -97,7 +113,7 @@ async def index_document(
     db: DatabaseSession,
     index_service: IndexServiceDependency,
 ) -> Document:
-    """切分一个当前用户的文档，并将 Chunk 和向量写入 PostgreSQL。"""
+    """切分有编辑权限的文档，并将 Chunk 和向量写入 PostgreSQL。"""
     try:
         parsed_document_id = UUID(document_id)
     except ValueError as exc:
@@ -107,7 +123,7 @@ async def index_document(
         ) from exc
 
     statement = select(Document).where(
-        Document.owner_id == _owner_id(claims),
+        document_access(_owner_id(claims), "edit"),
         Document.id == parsed_document_id,
     )
     document = (await db.scalars(statement)).one_or_none()
@@ -127,3 +143,31 @@ async def index_document(
     await db.commit()
     await db.refresh(document)
     return document
+
+
+@router.get("/{document_id}", response_model=Document)
+async def get_document(
+    document_id: UUID, claims: Claims, db: DatabaseSession
+) -> Document:
+    item = await db.scalar(
+        select(Document).where(
+            Document.id == document_id, document_access(_owner_id(claims))
+        )
+    )
+    if item is None:
+        raise HTTPException(404, "未找到文档")
+    return item
+
+
+@router.get("/{document_id}/chunks", response_model=list[Chunk])
+async def get_document_chunks(
+    document_id: UUID, claims: Claims, db: DatabaseSession
+) -> list[Chunk]:
+    await get_document(document_id, claims, db)
+    result = await db.scalars(
+        select(Chunk)
+        .join(Document, Chunk.document_id == Document.id)
+        .where(Chunk.document_id == document_id, document_access(_owner_id(claims)))
+        .order_by(Chunk.sort_index)
+    )
+    return list(result)

@@ -1,5 +1,6 @@
 import hashlib
 from datetime import UTC, datetime
+from uuid import UUID
 
 from fastapi.testclient import TestClient
 
@@ -26,6 +27,14 @@ class _DatabaseSession:
         del statement
         return _ScalarResult(self._documents)
 
+    async def execute(self, statement):
+        pass
+
+    async def scalar(self, statement):
+        from interview_ai.db.models import KnowledgeBase
+
+        return KnowledgeBase(owner_id="user-001", name="默认知识库")
+
     def add(self, document: Document) -> None:
         self.added = document
 
@@ -51,6 +60,7 @@ def test_documents_endpoint_returns_markdown_from_postgres() -> None:
     content = "# Python"
     document = Document(
         owner_id="user-001",
+        knowledge_base_id=UUID(int=1),
         name="python.md",
         content=content,
         content_hash=hashlib.sha256(content.encode()).hexdigest(),

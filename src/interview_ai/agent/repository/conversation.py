@@ -6,6 +6,7 @@ from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col
 
+from interview_ai.db.knowledge_bases import document_access
 from interview_ai.db.models import (
     Chunk,
     ConversationItem,
@@ -243,7 +244,7 @@ class ConversationRepository:
         result = await self._db.execute(
             select(Chunk, Document.name)
             .join(Document, col(Chunk.document_id) == col(Document.id))
-            .where(col(Chunk.id).in_(chunk_ids), col(Document.owner_id) == owner_id)
+            .where(col(Chunk.id).in_(chunk_ids), document_access(owner_id))
         )
         return [(chunk, name) for chunk, name in result]
 

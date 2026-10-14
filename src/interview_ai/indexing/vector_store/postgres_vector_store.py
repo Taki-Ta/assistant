@@ -4,6 +4,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from interview_ai.db.knowledge_bases import document_access
 from interview_ai.db.models import Chunk, Document, VectorRecord
 
 from ..models import SearchResult
@@ -73,7 +74,7 @@ class PostgresVectorStore:
             .select_from(VectorRecord)
             .join(Chunk, VectorRecord.chunk_id == Chunk.id)
             .join(Document, Chunk.document_id == Document.id)
-            .where(Document.owner_id == owner_id)
+            .where(document_access(owner_id))
             .order_by(distance)
             .limit(limit)
         )

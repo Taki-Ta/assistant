@@ -70,7 +70,9 @@ async def test_postgres_vector_store_search_converts_distance_to_similarity() ->
     statement = session.execute.await_args.args[0]
     sql = str(statement.compile(dialect=postgresql.dialect()))
     assert "JOIN documents" in sql
-    assert "documents.owner_id" in sql
+    assert "documents.knowledge_base_id" in sql
+    assert "knowledge_base_members.user_id" in sql
+    assert "knowledge_bases.is_deleted IS false" in sql
 
 
 @pytest.mark.asyncio

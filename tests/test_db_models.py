@@ -19,6 +19,7 @@ def test_postgres_document_table_stores_markdown_but_not_local_path() -> None:
     assert set(Document.__table__.columns.keys()) == {
         "id",
         "owner_id",
+        "knowledge_base_id",
         "name",
         "content",
         "content_hash",
