@@ -322,6 +322,30 @@ class Turn(SQLModel, table=True):
     )
 
 
+class UserPreference(SQLModel, table=True):
+    __tablename__ = "user_preferences"
+    __table_args__ = (
+        CheckConstraint(
+            "key IN ('response_language', 'answer_detail', 'code_language')",
+            name="ck_user_preferences_key",
+        ),
+    )
+
+    owner_id: str = Field(sa_column=Column(String(128), primary_key=True))
+    key: str = Field(sa_column=Column(String(32), primary_key=True))
+    value: str = Field(sa_column=Column(String(32), nullable=False))
+    source_turn_id: UUID | None = Field(
+        default=None,
+        sa_column=Column(ForeignKey("turns.id", ondelete="SET NULL"), nullable=True),
+    )
+    updated_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(
+            DateTime(timezone=True), nullable=False, server_default=func.now()
+        ),
+    )
+
+
 class ConversationItem(SQLModel, table=True):
     """按顺序保存消息、推理、工具调用、工具结果和压缩项。"""
 
