@@ -46,7 +46,9 @@ class Settings(BaseSettings):
     )
     max_tool_calls: int = Field(default=8, ge=1, alias="MAX_TOOL_CALLS")
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
 
     @model_validator(mode="after")
     def validate_chat_context_budget(self) -> Self:

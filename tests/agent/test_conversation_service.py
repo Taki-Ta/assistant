@@ -56,6 +56,29 @@ def _runtime() -> tuple[AgentContext, ToolDependencies]:
     )
 
 
+@pytest.mark.asyncio
+async def test_new_chat_loads_owner_preferences_and_supplies_current_turn():
+    service, _, repository, provider = _service()
+    repository.create_session.return_value = Session(id=SESSION_ID, owner_id="user-001")
+    repository.create_turn.return_value = Turn(
+        id=TURN_ID, session_id=SESSION_ID, sequence=0
+    )
+    provider.generate.return_value = _events(
+        AssistantMessageEvent(text="回答"), _completed()
+    )
+    preferences = AsyncMock()
+    preferences.list.return_value = {"code_language": "Python"}
+    context, dependencies = _runtime()
+    dependencies = ToolDependencies(dependencies.search_service, preferences)
+    await service.chat(None, "请用 Java", context, dependencies)
+    preferences.list.assert_awaited_once_with("user-001")
+    messages, runtime, _ = provider.generate.call_args.args
+    assert "Python" in messages[0].content
+    assert messages[-1].content == "请用 Java"
+    assert runtime.turn_id == TURN_ID
+    assert runtime.user_input == "请用 Java"
+
+
 def _events(
     *events: AgentEvent,
     error: Exception | None = None,
@@ -162,7 +185,7 @@ async def test_chat_passes_completed_message_history_to_provider() -> None:
             AgentMessage(role="assistant", content="第一答"),
             AgentMessage(role="user", content="第二问"),
         ],
-        context,
+        AgentContext(owner_id=context.owner_id, turn_id=TURN_ID, user_input="第二问"),
         dependencies,
     )
     assert provider.generate.call_args.kwargs == {
@@ -291,7 +314,7 @@ async def test_chat_cancellation_marks_turn_failed_and_propagates(stage) -> None
     if stage == "build":
         service._context_builder = MagicMock()
 
-        async def build(*args):
+        async def build(*args, **kwargs):
             await wait_for_cancellation()
 
         service._context_builder.build = AsyncMock(side_effect=build)

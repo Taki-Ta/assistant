@@ -1,7 +1,7 @@
 from asyncio import CancelledError
 from collections.abc import AsyncGenerator
 from contextlib import aclosing
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from uuid import UUID
 
 from anyio import CancelScope
@@ -124,8 +124,17 @@ class ConversationService:
 
         try:
             yield ChatStartedEvent(session_id=session_id, turn_id=turn_id)
+            context = replace(context, turn_id=turn_id, user_input=message)
+            preferences = (
+                await dependencies.preference_service.list(context.owner_id)
+                if dependencies.preference_service is not None
+                else {}
+            )
             built_context = await self._context_builder.build(
-                message, history_items, self._provider.tool_definitions()
+                message,
+                history_items,
+                self._provider.tool_definitions(),
+                preferences=preferences,
             )
             if built_context.compaction is not None:
                 checkpoint = built_context.compaction

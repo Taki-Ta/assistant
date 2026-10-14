@@ -23,6 +23,7 @@ from interview_ai.agent.providers.openai import (
     ToolCallLimitExceeded,
 )
 from interview_ai.agent.runtime import AgentContext, ToolDependencies
+from interview_ai.agent.tools.preferences import PreferenceTool
 from interview_ai.agent.tools.registry import ToolRegistry
 from interview_ai.agent.tools.search_knowledge import SearchKnowledgeTool
 from interview_ai.indexing.models import SearchResult
@@ -30,6 +31,49 @@ from interview_ai.indexing.search_service import SearchService
 
 CHUNK_ID = UUID("01900000-0000-7000-8000-000000000001")
 DOCUMENT_ID = UUID("01900000-0000-7000-8000-000000000002")
+
+
+@pytest.mark.asyncio
+async def test_openai_preference_tool_loop_uses_current_user_and_turn():
+    client = AsyncMock()
+    call = SimpleNamespace(
+        type="function_call",
+        id="item-pref",
+        call_id="call-pref",
+        name="remember_preference",
+        arguments=json.dumps(
+            {"key": "code_language", "value": "Python", "evidence": "以后用 Python"}
+        ),
+    )
+    client.responses.create.side_effect = [
+        SimpleNamespace(
+            output=[call], output_text="", status="completed", id="resp-pref"
+        ),
+        _final_response("记住了"),
+    ]
+    preferences = SimpleNamespace(change=AsyncMock(return_value='{"status":"saved"}'))
+    provider = OpenAIProvider(client=client, tools=ToolRegistry([PreferenceTool()]))
+    context = AgentContext("alice", UUID(int=1), "以后用 Python")
+    events = [
+        event
+        async for event in provider.generate(
+            [AgentMessage("user", context.user_input)],
+            context,
+            ToolDependencies(SimpleNamespace(), preferences),
+        )
+    ]
+    assert preferences.change.await_args.args[:3] == (
+        "alice",
+        UUID(int=1),
+        "以后用 Python",
+    )
+    assert next(
+        event for event in events if isinstance(event, FunctionCallOutputEvent)
+    ).succeeded
+    assert (
+        client.responses.create.await_args.kwargs["input"][-1]["output"]
+        == '{"status":"saved"}'
+    )
 
 
 @pytest.mark.asyncio

@@ -6,13 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from interview_ai.agent.context.budget import ContextBudget
 from interview_ai.agent.context.builder import ContextBuilder
+from interview_ai.agent.preferences import PreferenceService
 from interview_ai.agent.providers.openai import OpenAIProvider
 from interview_ai.agent.repository import ConversationRepository
 from interview_ai.agent.runtime import AgentContext, ToolDependencies
 from interview_ai.agent.services import ConversationService, SessionService
 from interview_ai.api.auth import verify_bearer
 from interview_ai.config import config
-from interview_ai.db.database import get_conversation_db, get_db
+from interview_ai.db.database import get_conversation_db, get_db, session_factory
 from interview_ai.db.repositories import PostgresChunkStore
 from interview_ai.indexing.embedding import OpenAIEmbeddingProvider
 from interview_ai.indexing.search_service import SearchService
@@ -113,6 +114,7 @@ def get_tool_dependencies(
 ) -> ToolDependencies:
     return ToolDependencies(
         search_service=search_service,
+        preference_service=PreferenceService(session_factory),
     )
 
 

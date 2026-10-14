@@ -57,6 +57,72 @@ class ItemRole(StrEnum):
     ASSISTANT = "assistant"
 
 
+class KnowledgeBase(SQLModel, table=True):
+    """知识库是共享及权限边界；根节点仅用于界面展示。"""
+
+    __tablename__ = "knowledge_bases"
+    __table_args__ = (
+        Index("ix_knowledge_bases_owner", "owner_id"),
+        Index(
+            "uq_knowledge_bases_default_owner",
+            "owner_id",
+            unique=True,
+            postgresql_where=text("is_default = true"),
+            sqlite_where=text("is_default = true"),
+        ),
+    )
+    id: UUID = Field(default_factory=uuid7, primary_key=True)
+    owner_id: str = Field(sa_column=Column(String(128), nullable=False))
+    name: str = Field(sa_column=Column(String(255), nullable=False))
+    description: str = Field(
+        default="", sa_column=Column(Text, nullable=False, server_default=text("''"))
+    )
+    is_default: bool = Field(
+        default=False,
+        sa_column=Column(Boolean, nullable=False, server_default=text("false")),
+    )
+    is_deleted: bool = Field(
+        default=False,
+        sa_column=Column(Boolean, nullable=False, server_default=text("false")),
+    )
+    created_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(
+            DateTime(timezone=True), nullable=False, server_default=func.now()
+        ),
+    )
+    updated_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(
+            DateTime(timezone=True), nullable=False, server_default=func.now()
+        ),
+    )
+
+
+class KnowledgeBaseMember(SQLModel, table=True):
+    __tablename__ = "knowledge_base_members"
+    __table_args__ = (
+        CheckConstraint(
+            "role IN ('viewer', 'editor', 'admin')",
+            name="ck_knowledge_base_members_role",
+        ),
+        Index("ix_knowledge_base_members_user", "user_id"),
+    )
+    knowledge_base_id: UUID = Field(
+        sa_column=Column(
+            ForeignKey("knowledge_bases.id", ondelete="CASCADE"), primary_key=True
+        )
+    )
+    user_id: str = Field(sa_column=Column(String(128), primary_key=True))
+    role: str = Field(sa_column=Column(String(16), nullable=False))
+    updated_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(
+            DateTime(timezone=True), nullable=False, server_default=func.now()
+        ),
+    )
+
+
 class Document(SQLModel, table=True):
     """保存在 PostgreSQL 中的 Markdown 文档及其索引状态。"""
 
@@ -73,10 +139,16 @@ class Document(SQLModel, table=True):
         ),
         Index("ix_documents_owner_updated", "owner_id", "updated_at"),
         Index("ix_documents_status_updated", "status", "updated_at"),
+        Index("ix_documents_knowledge_base", "knowledge_base_id"),
     )
 
     id: UUID = Field(default_factory=uuid7, primary_key=True)
     owner_id: str = Field(sa_column=Column(String(128), nullable=False))
+    knowledge_base_id: UUID = Field(
+        sa_column=Column(
+            ForeignKey("knowledge_bases.id", ondelete="RESTRICT"), nullable=False
+        )
+    )
     name: str = Field(sa_column=Column(String(255), nullable=False))
     content: str = Field(sa_column=Column(Text, nullable=False))
     content_hash: str = Field(sa_column=Column(String(64), nullable=False))
@@ -319,6 +391,30 @@ class Turn(SQLModel, table=True):
     completed_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+
+
+class UserPreference(SQLModel, table=True):
+    __tablename__ = "user_preferences"
+    __table_args__ = (
+        CheckConstraint(
+            "key IN ('response_language', 'answer_detail', 'code_language')",
+            name="ck_user_preferences_key",
+        ),
+    )
+
+    owner_id: str = Field(sa_column=Column(String(128), primary_key=True))
+    key: str = Field(sa_column=Column(String(32), primary_key=True))
+    value: str = Field(sa_column=Column(String(32), nullable=False))
+    source_turn_id: UUID | None = Field(
+        default=None,
+        sa_column=Column(ForeignKey("turns.id", ondelete="SET NULL"), nullable=True),
+    )
+    updated_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(
+            DateTime(timezone=True), nullable=False, server_default=func.now()
+        ),
     )
 
 
