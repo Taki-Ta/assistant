@@ -10,6 +10,7 @@ from uuid6 import uuid7
 
 from zhiyin.agent.context.builder import ContextBuilder
 from zhiyin.agent.context.models import BuiltContext, CompactionCheckpoint
+from zhiyin.agent.errors import SessionNotFoundError
 from zhiyin.agent.models import (
     AgentEvent,
     AgentMessage,
@@ -24,7 +25,7 @@ from zhiyin.agent.models import (
 )
 from zhiyin.agent.repository import ConversationRepository
 from zhiyin.agent.runtime import AgentContext, ToolDependencies
-from zhiyin.agent.services import ConversationService, SessionNotFoundError
+from zhiyin.agent.services import ConversationService
 from zhiyin.db.models import ConversationItem, ItemRole, ItemType, Session, Turn
 from zhiyin.indexing.search_service import SearchService
 

@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from zhiyin.agent.errors import ModelResponseError
 from zhiyin.agent.models import (
     AgentMessage,
     AssistantMessageEvent,
@@ -13,7 +14,7 @@ from zhiyin.agent.models import (
     ModelCompletedEvent,
     ToolExecutionResult,
 )
-from zhiyin.agent.providers.openai import ModelResponseError, OpenAIProvider
+from zhiyin.agent.providers.openai import OpenAIProvider
 from zhiyin.agent.runtime import AgentContext, ToolDependencies
 from zhiyin.agent.tools.registry import ToolRegistry
 

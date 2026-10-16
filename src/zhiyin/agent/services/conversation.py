@@ -8,6 +8,7 @@ from anyio import CancelScope
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from zhiyin.agent.context.builder import ContextBuilder
+from zhiyin.agent.errors import SessionNotFoundError
 from zhiyin.agent.models import (
     AgentMessage,
     AgentResult,
@@ -26,10 +27,6 @@ from zhiyin.agent.protocols import AgentProvider
 from zhiyin.agent.repository import ConversationRepository
 from zhiyin.agent.runtime import AgentContext, ToolDependencies
 from zhiyin.db.models import ConversationItem, ItemRole, ItemType, utc_now
-
-
-class SessionNotFoundError(LookupError):
-    pass
 
 
 @dataclass

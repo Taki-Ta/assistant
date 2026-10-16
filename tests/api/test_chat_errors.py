@@ -9,7 +9,7 @@ from zhiyin.agent.context.budget import (
     ContextBudgetExceeded,
     InputTooLarge,
 )
-from zhiyin.agent.providers.openai import ModelResponseError
+from zhiyin.agent.errors import ModelResponseError
 from zhiyin.api.routes.ai import chat
 from zhiyin.api.schemas import ChatRequest
 

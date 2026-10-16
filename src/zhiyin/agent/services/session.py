@@ -6,11 +6,10 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from zhiyin.agent.errors import SessionNotFoundError
 from zhiyin.agent.models import RetrievedSource
 from zhiyin.agent.repository import ConversationRepository
 from zhiyin.db.models import ConversationItem, ItemType, Session, Turn
-
-from .conversation import SessionNotFoundError
 
 
 class InvalidCursorError(ValueError):
