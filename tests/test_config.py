@@ -1,7 +1,34 @@
 import pytest
 from pydantic import ValidationError
 
-from zhiyin.config import Settings
+from zhiyin.config import Settings, config
+
+
+@pytest.fixture
+def settings_values():
+    values = config.model_dump(by_alias=True)
+    values.pop("EMBEDDING_PROVIDER")
+    return values
+
+
+def test_embedding_provider_defaults_to_openai(monkeypatch, settings_values):
+    monkeypatch.delenv("EMBEDDING_PROVIDER", raising=False)
+
+    assert Settings(_env_file=None, **settings_values).embedding_provider == "openai"
+
+
+@pytest.mark.parametrize("provider", ["openai", "langchain"])
+def test_settings_reads_embedding_provider(monkeypatch, settings_values, provider):
+    monkeypatch.setenv("EMBEDDING_PROVIDER", provider)
+
+    assert Settings(_env_file=None, **settings_values).embedding_provider == provider
+
+
+def test_settings_rejects_unknown_embedding_provider(monkeypatch, settings_values):
+    monkeypatch.setenv("EMBEDDING_PROVIDER", "unknown")
+
+    with pytest.raises(ValidationError, match="EMBEDDING_PROVIDER"):
+        Settings(_env_file=None, **settings_values)
 
 
 def test_Settings_reads_debug_flag_case_insensitively(monkeypatch):

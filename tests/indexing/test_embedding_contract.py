@@ -3,12 +3,17 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from zhiyin.indexing.embeddings.langchain import LangChainEmbeddingProvider
 from zhiyin.indexing.embeddings.openai import OpenAIEmbeddingProvider
 
 
-@pytest.fixture
-def make_provider():
+@pytest.fixture(params=["openai", "langchain"])
+def make_provider(request):
     def create(vectors):
+        if request.param == "langchain":
+            return LangChainEmbeddingProvider(
+                SimpleNamespace(aembed_documents=AsyncMock(return_value=vectors))
+            )
         response = SimpleNamespace(
             data=[
                 SimpleNamespace(index=index, embedding=vector)

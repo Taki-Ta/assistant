@@ -74,6 +74,8 @@ On macOS or Linux, use `cp .env.example .env`.
 OPENAI_API_KEY=your-embedding-api-key
 OPENAI_HOST=https://your-embedding-endpoint/v1
 EMBEDDING_MODEL_NAME=your-embedding-model
+# openai (default) or langchain; applies to indexing, search and retrieval evaluation.
+EMBEDDING_PROVIDER=openai
 DIMENSIONS=1536
 EMBEDDING_BATCH_SIZE=20
 
@@ -404,6 +406,8 @@ macOS 或 Linux 使用 `cp .env.example .env`。
 OPENAI_API_KEY=你的-Embedding-API-Key
 OPENAI_HOST=https://你的-Embedding-服务地址/v1
 EMBEDDING_MODEL_NAME=你的-Embedding-模型
+# 可选 openai（默认）或 langchain；用于索引、搜索和检索评测，与 CHAT_PROVIDER 独立。
+EMBEDDING_PROVIDER=openai
 DIMENSIONS=1536
 EMBEDDING_BATCH_SIZE=20
 

@@ -2,7 +2,6 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from openai import AsyncOpenAI
 
 from zhiyin.api.routes.ai import router as ai_router
 from zhiyin.api.routes.document import router as document_router
@@ -12,18 +11,13 @@ from zhiyin.api.routes.search import router as search_router
 from zhiyin.api.routes.session import router as session_router
 from zhiyin.api.routes.test import router as test_router
 from zhiyin.config import config
-from zhiyin.indexing.embeddings.openai import OpenAIEmbeddingProvider
+from zhiyin.indexing.embeddings.factory import create_embedding_provider
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    async with AsyncOpenAI(api_key=config.api_key, base_url=config.host) as client:
-        app.state.embedding_provider = OpenAIEmbeddingProvider(
-            client=client,
-            model=config.embedding_model_name,
-            dimensions=config.dimensions,
-            batch_size=config.embedding_batch_size,
-        )
+    async with create_embedding_provider(config) as provider:
+        app.state.embedding_provider = provider
         yield
 
 

@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     api_key: str = Field(alias="OPENAI_API_KEY")
     host: str = Field(alias="OPENAI_HOST")
     embedding_model_name: str = Field(alias="EMBEDDING_MODEL_NAME")
+    embedding_provider: Literal["openai", "langchain"] = Field(
+        default="openai", alias="EMBEDDING_PROVIDER"
+    )
 
     dimensions: int = Field(default=1536, alias="DIMENSIONS")
     embedding_batch_size: int = Field(default=20, ge=1, alias="EMBEDDING_BATCH_SIZE")

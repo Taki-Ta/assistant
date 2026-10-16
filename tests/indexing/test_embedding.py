@@ -1,12 +1,13 @@
+import asyncio
 import math
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
-from openai import AsyncOpenAI
 
 from zhiyin.config import config
+from zhiyin.indexing.embeddings.factory import create_embedding_provider
 from zhiyin.indexing.embeddings.openai import OpenAIEmbeddingProvider
 
 
@@ -40,26 +41,27 @@ async def test_embedding_provider_splits_large_inputs_into_ordered_batches():
     ]
 
 
-@pytest_asyncio.fixture
-async def provider():
-    async with AsyncOpenAI(
-        api_key=config.api_key,
-        base_url=config.host,
-    ) as client:
-        yield OpenAIEmbeddingProvider(
-            client=client,
-            model=config.embedding_model_name,
-            dimensions=config.dimensions,
-        )
+@pytest_asyncio.fixture(params=["openai", "langchain"])
+async def provider(request):
+    settings = config.model_copy(
+        update={"embedding_provider": request.param, "embedding_batch_size": 2}
+    )
+    async with create_embedding_provider(settings) as embedding_provider:
+        yield embedding_provider
 
 
 @pytest.mark.network
 @pytest.mark.asyncio
-async def test_openai_embedding_provider_should_work(provider):
+async def test_embedding_provider_should_work(provider):
     texts = ["风急天高猿啸哀", "渚清沙白鸟飞回", "无边落木萧萧下", "不尽长江滚滚来"]
 
-    result = await provider.embed(texts)
+    async with asyncio.timeout(60):
+        result = await provider.embed(texts)
+        query_vector = await provider.embed_one("诗歌中的秋景")
 
+    assert provider.model_name == config.embedding_model_name
     assert len(result) == len(texts)
     assert all(len(vector) == config.dimensions for vector in result)
     assert all(math.isfinite(value) for vector in result for value in vector)
+    assert len(query_vector) == config.dimensions
+    assert all(math.isfinite(value) for value in query_vector)
