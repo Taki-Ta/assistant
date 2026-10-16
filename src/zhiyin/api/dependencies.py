@@ -1,7 +1,7 @@
 from collections.abc import AsyncIterator
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from zhiyin.agent.context.budget import ContextBudget
@@ -11,7 +11,7 @@ from zhiyin.agent.providers.openai import OpenAIProvider
 from zhiyin.agent.repository import ConversationRepository
 from zhiyin.agent.runtime import AgentContext, ToolDependencies
 from zhiyin.agent.services import ConversationService, SessionService
-from zhiyin.api.auth import verify_bearer
+from zhiyin.api.auth import CurrentUserId
 from zhiyin.config import config
 from zhiyin.db.database import get_conversation_db, get_db, session_factory
 from zhiyin.db.repositories import PostgresChunkStore
@@ -79,20 +79,9 @@ def get_index_service(
     )
 
 
-Claims = Annotated[dict[str, object], Depends(verify_bearer)]
-
-
 def get_agent_context(
-    claims: Claims,
+    owner_id: CurrentUserId,
 ) -> AgentContext:
-    owner_id = claims.get("sub")
-
-    if not isinstance(owner_id, str) or not owner_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token subject is missing",
-        )
-
     return AgentContext(owner_id=owner_id)
 
 

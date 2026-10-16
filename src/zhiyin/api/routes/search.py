@@ -3,7 +3,8 @@ from pydantic import BaseModel, Field
 
 from zhiyin.indexing.models import SearchResult
 
-from ..dependencies import Claims, SearchServiceDependency
+from ..auth import CurrentUserId
+from ..dependencies import SearchServiceDependency
 
 router = APIRouter(prefix="/api/v1/search", tags=["search"])
 
@@ -13,24 +14,13 @@ class SearchRequest(BaseModel):
     limit: int | None = Field(default=None, ge=1, le=50)
 
 
-def _owner_id(claims: dict[str, object]) -> str:
-    owner_id = claims.get("sub")
-    if not isinstance(owner_id, str) or not owner_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token subject is missing",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return owner_id
-
-
 @router.post("", response_model=list[SearchResult])
 async def search(
     request: SearchRequest,
-    claims: Claims,
+    owner_id: CurrentUserId,
     search_service: SearchServiceDependency,
 ) -> list[SearchResult]:
     """根据用户问题查询知识库"""
     if not request.query.strip():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="未传入要查询的问题")
-    return await search_service.search(request.query, _owner_id(claims), request.limit)
+    return await search_service.search(request.query, owner_id, request.limit)

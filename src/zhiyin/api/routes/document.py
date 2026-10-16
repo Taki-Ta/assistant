@@ -11,31 +11,21 @@ from zhiyin.db.knowledge_bases import KnowledgeBaseService, document_access
 from zhiyin.db.models import Chunk, Document, DocumentStatus
 from zhiyin.ingestion.scanner import split_document
 
-from ..dependencies import Claims, DatabaseSession, IndexServiceDependency
+from ..auth import CurrentUserId
+from ..dependencies import DatabaseSession, IndexServiceDependency
 
 MAX_MARKDOWN_SIZE = 5 * 1024 * 1024
 
 router = APIRouter(prefix="/api/v1/documents", tags=["document"])
 
 
-def _owner_id(claims: dict[str, object]) -> str:
-    owner_id = claims.get("sub")
-    if not isinstance(owner_id, str) or not owner_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token subject is missing",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return owner_id
-
-
 @router.get("", response_model=list[Document], status_code=status.HTTP_200_OK)
 async def get_documents(
-    claims: Claims, db: DatabaseSession, knowledge_base_id: UUID | None = None
+    owner_id: CurrentUserId, db: DatabaseSession, knowledge_base_id: UUID | None = None
 ) -> list[Document]:
     stmt = (
         select(Document)
-        .where(document_access(_owner_id(claims)))
+        .where(document_access(owner_id))
         .order_by(Document.updated_at.desc())
     )
     if knowledge_base_id is not None:
@@ -56,7 +46,7 @@ async def get_documents(
 @router.post("", response_model=Document, status_code=status.HTTP_201_CREATED)
 async def add_document(
     file: Annotated[UploadFile, File(description="UTF-8 Markdown 文件")],
-    claims: Claims,
+    owner_id: CurrentUserId,
     db: DatabaseSession,
     knowledge_base_id: Annotated[UUID | None, Form()] = None,
 ) -> Document:
@@ -82,7 +72,6 @@ async def add_document(
             detail="Markdown 文件必须使用 UTF-8 编码",
         ) from exc
 
-    owner_id = _owner_id(claims)
     knowledge_bases = KnowledgeBaseService(db)
     try:
         if knowledge_base_id is None:
@@ -109,7 +98,7 @@ async def add_document(
 @router.post("/{document_id}/index", response_model=Document)
 async def index_document(
     document_id: str,
-    claims: Claims,
+    owner_id: CurrentUserId,
     db: DatabaseSession,
     index_service: IndexServiceDependency,
 ) -> Document:
@@ -123,7 +112,7 @@ async def index_document(
         ) from exc
 
     statement = select(Document).where(
-        document_access(_owner_id(claims), "edit"),
+        document_access(owner_id, "edit"),
         Document.id == parsed_document_id,
     )
     document = (await db.scalars(statement)).one_or_none()
@@ -147,12 +136,10 @@ async def index_document(
 
 @router.get("/{document_id}", response_model=Document)
 async def get_document(
-    document_id: UUID, claims: Claims, db: DatabaseSession
+    document_id: UUID, owner_id: CurrentUserId, db: DatabaseSession
 ) -> Document:
     item = await db.scalar(
-        select(Document).where(
-            Document.id == document_id, document_access(_owner_id(claims))
-        )
+        select(Document).where(Document.id == document_id, document_access(owner_id))
     )
     if item is None:
         raise HTTPException(404, "未找到文档")
@@ -161,13 +148,13 @@ async def get_document(
 
 @router.get("/{document_id}/chunks", response_model=list[Chunk])
 async def get_document_chunks(
-    document_id: UUID, claims: Claims, db: DatabaseSession
+    document_id: UUID, owner_id: CurrentUserId, db: DatabaseSession
 ) -> list[Chunk]:
-    await get_document(document_id, claims, db)
+    await get_document(document_id, owner_id, db)
     result = await db.scalars(
         select(Chunk)
         .join(Document, Chunk.document_id == Document.id)
-        .where(Chunk.document_id == document_id, document_access(_owner_id(claims)))
+        .where(Chunk.document_id == document_id, document_access(owner_id))
         .order_by(Chunk.sort_index)
     )
     return list(result)
