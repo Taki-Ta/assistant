@@ -8,6 +8,7 @@ import pytest
 from zhiyin.agent.context.budget import ContextBudget, ContextBudgetExceeded
 from zhiyin.agent.context.estimator import estimate_request
 from zhiyin.agent.context.tool_output import ToolOutputBudget
+from zhiyin.agent.errors import ModelResponseError, ToolCallLimitExceeded
 from zhiyin.agent.models import (
     AgentMessage,
     AssistantMessageEvent,
@@ -17,11 +18,7 @@ from zhiyin.agent.models import (
     RetrievedSource,
     ToolExecutionResult,
 )
-from zhiyin.agent.providers.openai import (
-    ModelResponseError,
-    OpenAIProvider,
-    ToolCallLimitExceeded,
-)
+from zhiyin.agent.providers.openai import OpenAIProvider
 from zhiyin.agent.runtime import AgentContext, ToolDependencies
 from zhiyin.agent.tools.preferences import PreferenceTool
 from zhiyin.agent.tools.registry import ToolRegistry

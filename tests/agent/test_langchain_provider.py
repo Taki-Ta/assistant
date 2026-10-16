@@ -12,6 +12,7 @@ from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResu
 from pydantic import Field
 
 from zhiyin.agent.context.budget import ContextBudget, ContextBudgetExceeded
+from zhiyin.agent.errors import ModelResponseError, ToolCallLimitExceeded
 from zhiyin.agent.models import (
     AgentMessage,
     AssistantMessageEvent,
@@ -21,10 +22,6 @@ from zhiyin.agent.models import (
     ModelCompletedEvent,
 )
 from zhiyin.agent.providers.langchain import LangChainProvider
-from zhiyin.agent.providers.openai import (
-    ModelResponseError,
-    ToolCallLimitExceeded,
-)
 from zhiyin.agent.runtime import AgentContext, ToolDependencies
 from zhiyin.agent.services.conversation import _event_to_item
 from zhiyin.db.models import ItemType

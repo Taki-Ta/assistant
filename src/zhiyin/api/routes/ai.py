@@ -14,12 +14,12 @@ from zhiyin.agent.context.budget import (
     ContextBudgetExceeded,
     InputTooLarge,
 )
-from zhiyin.agent.models import ChatStartedEvent, ChatStreamEvent
-from zhiyin.agent.providers.openai import (
+from zhiyin.agent.errors import (
     ModelResponseError,
+    SessionNotFoundError,
     ToolCallLimitExceeded,
 )
-from zhiyin.agent.services import SessionNotFoundError
+from zhiyin.agent.models import ChatStartedEvent, ChatStreamEvent
 
 from ..dependencies import (
     AgentContextDependency,

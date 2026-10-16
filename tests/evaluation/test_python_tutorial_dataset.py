@@ -5,7 +5,7 @@ from pathlib import Path
 
 from zhiyin.db.models import Document
 from zhiyin.evaluation.dataset import load_retrieval_cases
-from zhiyin.ingestion.scanner import split_document
+from zhiyin.ingestion.chunker import split_document
 
 DATASET_ROOT = Path(__file__).parents[2] / "evals" / "python_tutorial"
 CORPUS_ROOT = DATASET_ROOT / "corpus"

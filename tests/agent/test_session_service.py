@@ -5,8 +5,8 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid6 import uuid7
 
+from zhiyin.agent.errors import SessionNotFoundError
 from zhiyin.agent.repository import ConversationRepository
-from zhiyin.agent.services import SessionNotFoundError
 from zhiyin.agent.services.session import InvalidCursorError, SessionService
 from zhiyin.db.models import (
     Chunk,

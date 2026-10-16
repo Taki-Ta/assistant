@@ -24,6 +24,7 @@ from zhiyin.agent.context.tool_output import (
     DEFAULT_MAX_TOOL_RESULT_TOKENS,
     ToolOutputBudget,
 )
+from zhiyin.agent.errors import ModelResponseError, ToolCallLimitExceeded
 from zhiyin.agent.models import (
     AgentEvent,
     AgentMessage,
@@ -34,11 +35,7 @@ from zhiyin.agent.models import (
     ModelCompletedEvent,
     RetrievedSource,
 )
-from zhiyin.agent.providers.openai import (
-    ModelResponseError,
-    OpenAIProvider,
-    ToolCallLimitExceeded,
-)
+from zhiyin.agent.providers.openai import OpenAIProvider
 from zhiyin.agent.runtime import (
     AgentContext,
     LangChainAgentContext,

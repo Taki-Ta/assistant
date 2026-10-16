@@ -6,6 +6,8 @@ from typing import Annotated
 
 import typer
 
+from zhiyin.ingestion.chunker import split_document
+
 from .evaluation.runner import run_retrieval_evaluation, save_retrieval_report
 from .ingestion.manifest import (
     compare_manifests,
@@ -13,7 +15,7 @@ from .ingestion.manifest import (
     load_manifest,
 )
 from .ingestion.models import MAX_CHUNK_LENGTH, ChangeSet
-from .ingestion.scanner import scan_path, split_document
+from .ingestion.scanner import scan_path
 
 app = typer.Typer()
 

@@ -27,3 +27,16 @@ def _unauthorized(detail: str) -> HTTPException:
         detail=detail,
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+
+Claims = Annotated[dict[str, object], Depends(verify_bearer)]
+
+
+def get_current_user_id(claims: Claims) -> str:
+    owner_id = claims.get("sub")
+    if not isinstance(owner_id, str) or not owner_id:
+        raise _unauthorized("Token subject is missing")
+    return owner_id
+
+
+CurrentUserId = Annotated[str, Depends(get_current_user_id)]

@@ -15,6 +15,7 @@ from zhiyin.agent.context.tool_output import (
     DEFAULT_MAX_TOOL_RESULT_TOKENS,
     ToolOutputBudget,
 )
+from zhiyin.agent.errors import ModelResponseError, ToolCallLimitExceeded
 from zhiyin.agent.tools.registry import ToolRegistry
 from zhiyin.config import config
 
@@ -32,14 +33,6 @@ from ..runtime import AgentContext, ToolDependencies
 from ..tools.default_registry import tool_registry
 
 logger = logging.getLogger(__name__)
-
-
-class ToolCallLimitExceeded(RuntimeError):
-    pass
-
-
-class ModelResponseError(RuntimeError):
-    """模型未正常完成生成，不能作为完整回答保存。"""
 
 
 def _validate_completion(response: object) -> None:

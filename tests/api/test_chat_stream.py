@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from starlette.requests import ClientDisconnect
 
+from zhiyin.agent.errors import ModelResponseError, SessionNotFoundError
 from zhiyin.agent.models import (
     AssistantTextDeltaEvent,
     ChatCompletedEvent,
@@ -15,8 +16,6 @@ from zhiyin.agent.models import (
     FunctionCallEvent,
     FunctionCallOutputEvent,
 )
-from zhiyin.agent.providers.openai import ModelResponseError
-from zhiyin.agent.services import SessionNotFoundError
 from zhiyin.api.dependencies import (
     get_agent_context,
     get_conversation_service,

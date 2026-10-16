@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, Response
 
-from zhiyin.agent.services import SessionNotFoundError
+from zhiyin.agent.errors import SessionNotFoundError
 from zhiyin.agent.services.session import InvalidCursorError, TurnRecord
 from zhiyin.db.models import ItemType, TurnStatus
 

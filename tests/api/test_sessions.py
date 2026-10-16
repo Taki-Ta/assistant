@@ -5,8 +5,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from uuid6 import uuid7
 
+from zhiyin.agent.errors import SessionNotFoundError
 from zhiyin.agent.runtime import AgentContext
-from zhiyin.agent.services import SessionNotFoundError
 from zhiyin.agent.services.session import (
     InvalidCursorError,
     SessionPage,
