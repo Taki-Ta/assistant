@@ -3,8 +3,9 @@ import json
 from typer.testing import CliRunner
 
 from zhiyin.cli import app
+from zhiyin.ingestion.chunker import split_document
 from zhiyin.ingestion.manifest import generate_manifest, save_manifest
-from zhiyin.ingestion.scanner import scan_path, split_document
+from zhiyin.ingestion.scanner import scan_path
 
 runner = CliRunner()
 

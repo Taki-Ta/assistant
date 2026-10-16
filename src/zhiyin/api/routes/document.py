@@ -9,7 +9,7 @@ from sqlalchemy import select
 
 from zhiyin.db.knowledge_bases import KnowledgeBaseService, document_access
 from zhiyin.db.models import Chunk, Document, DocumentStatus
-from zhiyin.ingestion.scanner import split_document
+from zhiyin.ingestion.chunker import split_document
 
 from ..auth import CurrentUserId
 from ..dependencies import DatabaseSession, IndexServiceDependency

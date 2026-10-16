@@ -14,7 +14,7 @@ from zhiyin.indexing.embeddings.openai import OpenAIEmbeddingProvider
 from zhiyin.indexing.index_service import IndexService
 from zhiyin.indexing.search_service import SearchService
 from zhiyin.indexing.vector_store import PostgresVectorStore
-from zhiyin.ingestion.scanner import split_document
+from zhiyin.ingestion.chunker import split_document
 
 from .dataset import load_retrieval_cases
 from .evaluator import evaluate_retrieval

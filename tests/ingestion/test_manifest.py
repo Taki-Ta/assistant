@@ -3,6 +3,7 @@ from dataclasses import asdict
 
 import pytest
 
+from zhiyin.ingestion.chunker import split_document
 from zhiyin.ingestion.manifest import (
     compare_manifests,
     generate_manifest,
@@ -11,7 +12,6 @@ from zhiyin.ingestion.manifest import (
     save_manifest,
 )
 from zhiyin.ingestion.models import Manifest
-from zhiyin.ingestion.scanner import split_document
 
 from .util import make_file
 

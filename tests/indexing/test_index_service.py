@@ -9,7 +9,7 @@ from zhiyin.indexing.protocols import (
     EmbeddingProvider,
     VectorStore,
 )
-from zhiyin.ingestion.scanner import split_document
+from zhiyin.ingestion.chunker import split_document
 
 
 def make_service(vectors):
