@@ -12,7 +12,7 @@ from zhiyin.api.routes.search import router as search_router
 from zhiyin.api.routes.session import router as session_router
 from zhiyin.api.routes.test import router as test_router
 from zhiyin.config import config
-from zhiyin.indexing.embedding import OpenAIEmbeddingProvider
+from zhiyin.indexing.embeddings.openai import OpenAIEmbeddingProvider
 
 
 @asynccontextmanager

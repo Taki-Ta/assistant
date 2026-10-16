@@ -10,9 +10,9 @@ from zhiyin.db.database import session_factory
 from zhiyin.db.knowledge_bases import KnowledgeBaseService
 from zhiyin.db.models import Document, DocumentStatus
 from zhiyin.db.repositories import PostgresChunkStore
-from zhiyin.indexing.embedding import OpenAIEmbeddingProvider
+from zhiyin.indexing.embeddings.openai import OpenAIEmbeddingProvider
+from zhiyin.indexing.index_service import IndexService
 from zhiyin.indexing.search_service import SearchService
-from zhiyin.indexing.service import IndexService
 from zhiyin.indexing.vector_store import PostgresVectorStore
 from zhiyin.ingestion.scanner import split_document
 

@@ -37,4 +37,7 @@ class OpenAIEmbeddingProvider:
         return vectors
 
     async def embed_one(self, text: str) -> list[float]:
-        return (await self.embed([text]))[0]
+        result = await self.embed([text])
+        if len(result) != 1 or not result[0]:
+            raise ValueError("单条 Embedding 请求必须返回一个非空向量")
+        return result[0]

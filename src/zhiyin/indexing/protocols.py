@@ -12,7 +12,9 @@ class EmbeddingProvider(Protocol):
 
     async def embed(self, texts: list[str]) -> list[list[float]]: ...
 
-    async def embed_one(self, text: str) -> list[float]: ...
+    async def embed_one(self, text: str) -> list[float]:
+        """Return one nonempty vector; raise ValueError for an invalid result count or empty vector."""
+        ...
 
 
 class ChunkStore(Protocol):

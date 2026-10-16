@@ -15,9 +15,9 @@ from zhiyin.api.auth import verify_bearer
 from zhiyin.config import config
 from zhiyin.db.database import get_conversation_db, get_db, session_factory
 from zhiyin.db.repositories import PostgresChunkStore
-from zhiyin.indexing.embedding import OpenAIEmbeddingProvider
+from zhiyin.indexing.index_service import IndexService
+from zhiyin.indexing.protocols import EmbeddingProvider
 from zhiyin.indexing.search_service import SearchService
-from zhiyin.indexing.service import IndexService
 from zhiyin.indexing.vector_store import PostgresVectorStore
 
 DatabaseSession = Annotated[AsyncSession, Depends(get_db)]
@@ -46,12 +46,12 @@ ConversationServiceDependency = Annotated[
 ]
 
 
-def get_embedding_provider(request: Request) -> OpenAIEmbeddingProvider:
+def get_embedding_provider(request: Request) -> EmbeddingProvider:
     return request.app.state.embedding_provider
 
 
 EmbeddingProviderDependency = Annotated[
-    OpenAIEmbeddingProvider,
+    EmbeddingProvider,
     Depends(get_embedding_provider),
 ]
 

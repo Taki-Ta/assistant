@@ -7,7 +7,7 @@ import pytest_asyncio
 from openai import AsyncOpenAI
 
 from zhiyin.config import config
-from zhiyin.indexing.embedding import OpenAIEmbeddingProvider
+from zhiyin.indexing.embeddings.openai import OpenAIEmbeddingProvider
 
 
 @pytest.mark.asyncio
